@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "preferredBookTitle": "毛泽东选集 第一卷（正文版）",
+  "totalSegmentCount": 6731,
+  "packages": [
+    {
+      "file": "毛泽东选集-第一卷-正文版.tanyue.json",
+      "title": "毛泽东选集 第一卷（正文版）",
+      "segmentCount": 1038
+    },
+    {
+      "file": "毛泽东选集-第二卷-正文版.tanyue.json",
+      "title": "毛泽东选集 第二卷（正文版）",
+      "segmentCount": 1444
+    },
+    {
+      "file": "毛泽东选集-第三卷-正文版.tanyue.json",
+      "title": "毛泽东选集 第三卷（正文版）",
+      "segmentCount": 925
+    },
+    {
+      "file": "毛泽东选集-第四卷-正文版.tanyue.json",
+      "title": "毛泽东选集 第四卷（正文版）",
+      "segmentCount": 1095
+    },
+    {
+      "file": "毛泽东选集-第五卷-正文版.tanyue.json",
+      "title": "毛泽东选集 第五卷（正文版）",
+      "segmentCount": 1701
+    },
+    {
+      "file": "毛主席语录-正文版.tanyue.json",
+      "title": "毛主席语录（正文版）",
+      "segmentCount": 528
+    }
+  ]
+}

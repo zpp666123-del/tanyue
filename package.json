@@ -1,0 +1,41 @@
+{
+  "name": "tanyue-desktop-reader",
+  "version": "0.2.3",
+  "private": true,
+  "description": "弹阅：本地优先、安静不打扰的桌面微阅读工具",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zpp666123-del/tanyue.git"
+  },
+  "homepage": "https://github.com/zpp666123-del/tanyue#readme",
+  "bugs": {
+    "url": "https://github.com/zpp666123-del/tanyue/issues"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "node tools/dev-server.mjs --port 1420 --dir dist --watch",
+    "build": "node tools/build.mjs",
+    "build:cli": "node tools/build-cli.mjs",
+    "preview": "node tools/dev-server.mjs --port 4173 --dir dist --open",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "node tools/test.mjs",
+    "verify": "node tools/verify.mjs",
+    "tauri": "node tools/run-tauri.mjs",
+    "tauri:dev": "node tools/run-tauri.mjs dev",
+    "tauri:build": "node tools/run-tauri.mjs build",
+    "release:windows": "node tools/build-windows-release.mjs"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-autostart": "^2.0.0",
+    "@tauri-apps/plugin-notification": "^2.0.0",
+    "@tauri-apps/plugin-opener": "^2.0.0"
+  }
+}

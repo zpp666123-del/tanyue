@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "none",
+    "lib": [
+      "ES2020",
+      "DOM"
+    ],
+    "strict": true,
+    "skipLibCheck": true,
+    "outFile": ".build/tests.js"
+  },
+  "files": [
+    "tests/test-harness.ts",
+    "src/types.ts",
+    "src/utils.ts",
+    "src/source-adapter.ts",
+    "src/text-source-adapter.ts",
+    "src/import-package.ts",
+    "src/segmenter.ts",
+    "src/scheduler.ts",
+    "src/demo-data.ts",
+    "src/store.ts",
+    "src/bundled-seeds.ts",
+    "src/persistence.ts",
+    "src/popup-layout.ts",
+    "src/desktop.ts",
+    "tests/source-adapter.test.ts",
+    "tests/import-package.test.ts",
+    "tests/segmenter.test.ts",
+    "tests/store.test.ts",
+    "tests/persistence.test.ts",
+    "tests/bundled-seeds.test.ts",
+    "tests/popup-layout.test.ts",
+    "tests/demo-data.test.ts",
+    "tests/core.test.ts",
+    "tests/run.ts"
+  ]
+}

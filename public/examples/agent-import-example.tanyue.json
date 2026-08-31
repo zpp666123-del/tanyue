@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "offsetUnit": "unicode-scalar",
+  "book": {
+    "title": "Agent 导入示例",
+    "author": "示例作者"
+  },
+  "source": {
+    "name": "example.pdf",
+    "format": "pdf",
+    "mediaType": "application/pdf",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "processing": {
+    "parser": {
+      "id": "example.pdf-extractor",
+      "version": "1.0.0"
+    },
+    "segmenter": {
+      "id": "example.agent-segmenter",
+      "version": "1.0.0",
+      "ruleVersion": "work-reading-v1"
+    }
+  },
+  "blocks": [
+    {
+      "id": "page-1-block-1",
+      "sequence": 1,
+      "type": "paragraph",
+      "text": "这是由外部 Agent 从原文件提取的完整正文。",
+      "sourceAnchor": {
+        "kind": "page",
+        "value": "1",
+        "label": "第 1 页"
+      }
+    }
+  ],
+  "segments": [
+    {
+      "sequence": 1,
+      "chapterTitle": "第一段",
+      "spans": [
+        {
+          "blockId": "page-1-block-1",
+          "start": 0,
+          "end": 24
+        }
+      ]
+    }
+  ]
+}

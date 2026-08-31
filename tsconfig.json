@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "none",
+    "lib": [
+      "ES2020",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "outFile": "dist/app.js",
+    "removeComments": false,
+    "sourceMap": true
+  },
+  "files": [
+    "src/types.ts",
+    "src/utils.ts",
+    "src/source-adapter.ts",
+    "src/text-source-adapter.ts",
+    "src/import-package.ts",
+    "src/demo-data.ts",
+    "src/segmenter.ts",
+    "src/scheduler.ts",
+    "src/store.ts",
+    "src/bundled-seeds.ts",
+    "src/persistence.ts",
+    "src/popup-layout.ts",
+    "src/desktop.ts",
+    "src/icons.ts",
+    "src/components.ts",
+    "src/floating.ts",
+    "src/views.ts",
+    "src/popup.ts",
+    "src/app.ts"
+  ]
+}

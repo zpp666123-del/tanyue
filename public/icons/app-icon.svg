@@ -1,0 +1,25 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="panel" x1="76" y1="48" x2="436" y2="468" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#F3F0EB"/>
+    </linearGradient>
+    <linearGradient id="book" x1="151" y1="136" x2="363" y2="374" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E47D57"/>
+      <stop offset="1" stop-color="#B8462B"/>
+    </linearGradient>
+    <filter id="shadow" x="38" y="38" width="436" height="452" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#5F4035" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+  <g filter="url(#shadow)">
+    <rect x="56" y="48" width="400" height="400" rx="108" fill="url(#panel)"/>
+    <rect x="57" y="49" width="398" height="398" rx="107" stroke="#FFFFFF" stroke-opacity="0.9" stroke-width="2"/>
+  </g>
+  <rect x="126" y="116" width="260" height="280" rx="68" fill="url(#book)"/>
+  <path d="M160 166C160 147.222 175.222 132 194 132H246V360H194C175.222 360 160 344.778 160 326V166Z" fill="white" fill-opacity="0.94"/>
+  <path d="M352 166C352 147.222 336.778 132 318 132H266V360H318C336.778 360 352 344.778 352 326V166Z" fill="white" fill-opacity="0.94"/>
+  <path d="M256 142V360" stroke="#8F321F" stroke-opacity="0.35" stroke-width="8" stroke-linecap="round"/>
+  <path d="M184 190H225M184 224H219M184 258H228M287 190H328M293 224H328M284 258H322" stroke="#C45A3A" stroke-opacity="0.52" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="378" cy="116" r="24" fill="#C95F3D" stroke="white" stroke-width="8"/>
+</svg>

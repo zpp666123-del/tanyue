@@ -1,0 +1,61 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "弹阅",
+  "version": "0.2.3",
+  "identifier": "com.generalconsulting.tanyue",
+  "build": {
+    "beforeDevCommand": "npm run build:cli && npm run dev",
+    "devUrl": "http://127.0.0.1:1420",
+    "beforeBuildCommand": "npm run build && npm run build:cli",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "弹阅",
+        "width": 1320,
+        "height": 850,
+        "minWidth": 980,
+        "minHeight": 650,
+        "center": true,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true,
+        "visible": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https: http://127.0.0.1:*; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'self'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "externalBin": ["binaries/tanyue-cli"],
+    "category": "Productivity",
+    "shortDescription": "少而精地读，深而静地思。",
+    "longDescription": "面向上班族的本地优先桌面微阅读工具。导入书籍和文档后，按完整语义拆分为几十秒可读完的片段，并在合适的时间通过安静弹窗呈现。",
+    "copyright": "Copyright © 2026 General Consulting",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "wix": null,
+      "nsis": {
+        "displayLanguageSelector": true,
+        "installerIcon": "icons/icon.ico",
+        "languages": [
+          "SimpChinese",
+          "English"
+        ],
+        "installMode": "currentUser"
+      }
+    }
+  }
+}
