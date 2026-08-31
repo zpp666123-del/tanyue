@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import process from "node:process";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const readText = (...parts) => readFileSync(resolve(root, ...parts), "utf8").replace(/\r\n/g, "\n");
 const run = (label, command, args) => {
   console.log(`\n[verify] ${label}`);
   const executable = command === "tsc" ? process.execPath : command;
@@ -49,13 +50,13 @@ for (const relative of required) {
   }
 }
 
-const html = readFileSync(resolve(root, "dist/index.html"), "utf8");
+const html = readText("dist/index.html");
 if (!["app.js", "styles.css", "apple.css"].every((asset) => html.includes(asset))) {
   console.error("Built HTML does not reference all bundled assets.");
   process.exit(1);
 }
 
-const compiled = readFileSync(resolve(root, "dist/app.js"), "utf8");
+const compiled = readText("dist/app.js");
 for (const token of [
   "弹阅", "FloatingWidgetController", "floating-widget-shell", "读完下一段", "open-reader-request",
   "open-home-request", 'data-popup-action="open-home"', "打开弹阅首页",
@@ -77,7 +78,7 @@ if (compiled.includes("floating-badge") || compiled.includes("floating-ready")) 
   process.exit(1);
 }
 
-const popupCss = readFileSync(resolve(root, "dist/apple.css"), "utf8");
+const popupCss = readText("dist/apple.css");
 for (const token of [
   "body.popup-window .reading-popup-layer { padding: 0; place-items: stretch; }",
   "grid-template-columns: repeat(4,minmax(0,1fr))",
@@ -92,7 +93,7 @@ for (const token of [
   }
 }
 
-const baseCss = readFileSync(resolve(root, "dist/styles.css"), "utf8");
+const baseCss = readText("dist/styles.css");
 for (const token of [
   "body.popup-window #toast-host { right: 12px; bottom: 62px;",
   ".toast.toast-compact { min-width: 0; max-width: 180px; min-height: 28px;"
@@ -109,7 +110,7 @@ for (const token of ["page-in", "translateY(-1px)", "button:active { transform: 
   }
 }
 
-const rust = readFileSync(resolve(root, "src-tauri", "src", "lib.rs"), "utf8");
+const rust = readText("src-tauri", "src", "lib.rs");
 for (const token of [
   ".visible(false)", "if reveal {", "const FLOATING_WIDTH: f64 = 52.0;",
   "const WINDOW_GAP: f64 = 4.0;", "struct WindowCoordinator", "popup_anchor.take()",
@@ -140,7 +141,7 @@ if (showPopupSource.includes("floating.hide()")) {
   process.exit(1);
 }
 
-const appSource = readFileSync(resolve(root, "src", "app.ts"), "utf8");
+const appSource = readText("src", "app.ts");
 if (!appSource.includes('if (isPopupMode()) {\n        document.body.innerHTML = "";\n        this.bindGlobalEvents();\n        await this.setupDesktopListeners();')) {
   console.error("Standalone reading popup must subscribe to cross-window state before rendering.");
   process.exit(1);
@@ -157,8 +158,8 @@ if (!appSource.includes("activeReaderSegmentId")
   process.exit(1);
 }
 
-const popupSource = readFileSync(resolve(root, "src", "popup.ts"), "utf8");
-const viewsSource = readFileSync(resolve(root, "src", "views.ts"), "utf8");
+const popupSource = readText("src", "popup.ts");
+const viewsSource = readText("src", "views.ts");
 if (popupSource.includes("segment.contextBridge ?") || viewsSource.includes("segment.contextBridge ?")) {
   console.error("Reading surfaces must not render canned context bridge copy.");
   process.exit(1);
