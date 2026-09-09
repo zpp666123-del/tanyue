@@ -1,7 +1,7 @@
 namespace TanYue {
   export const STORAGE_KEY = "tanyue.state.v1";
   export const LEGACY_STORAGE_KEYS = ["shuchuang.state.v1"] as const;
-  export const APP_VERSION = "0.2.5";
+  export const APP_VERSION = "0.2.7";
   export const BRAND = {
     name: "弹阅",
     codeName: "TanYue",

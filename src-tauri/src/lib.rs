@@ -625,15 +625,26 @@ async fn move_floating_widget(
     let Some(window) = app.get_webview_window("reading-floating") else {
         return Ok(false);
     };
-    window
-        .set_position(LogicalPosition::new(x, y))
-        .map_err(|error| error.to_string())?;
-    if settle {
-        if let Some(anchor) = capture_floating_anchor(&window) {
-            let (x, y) = docked_floating_position(anchor);
-            set_floating_content_position(&window, x, y)?;
-        }
-    }
+    let mut anchor = capture_floating_anchor(&window).ok_or("无法获取悬浮图标屏幕位置")?;
+    let size = window.outer_size().map_err(|error| error.to_string())?;
+    anchor.rect = floating_content_rect(
+        (x * anchor.scale, y * anchor.scale),
+        (size.width as f64, size.height as f64),
+        anchor.scale,
+    );
+    let monitor = window
+        .current_monitor()
+        .map_err(|error| error.to_string())?
+        .ok_or("无法获取屏幕")?;
+    let area = monitor.work_area();
+    anchor.monitor = (
+        area.position.x as f64,
+        area.position.y as f64,
+        area.size.width as f64,
+        area.size.height as f64,
+    );
+    let (x, y) = bounded_floating_position(anchor, settle);
+    set_floating_content_position(&window, x, y)?;
     Ok(true)
 }
 
@@ -650,6 +661,23 @@ fn docked_floating_position(anchor: PopupAnchor) -> (f64, f64) {
         x
     };
     (x, y.clamp(top, (top + screen_height - height).max(top)))
+}
+
+fn bounded_floating_position(mut anchor: PopupAnchor, settle: bool) -> (f64, f64) {
+    let (left, top, width, height) = anchor.monitor;
+    anchor.rect.0 = anchor
+        .rect
+        .0
+        .clamp(left, (left + width - anchor.rect.2).max(left));
+    anchor.rect.1 = anchor
+        .rect
+        .1
+        .clamp(top, (top + height - anchor.rect.3).max(top));
+    if settle {
+        docked_floating_position(anchor)
+    } else {
+        (anchor.rect.0, anchor.rect.1)
+    }
 }
 
 #[tauri::command]
@@ -678,6 +706,32 @@ mod window_geometry_tests {
         floating_content_rect, floating_outer_position_for_content, floating_position_for_popup,
         popup_geometry_for_anchor, popup_position_for_anchor, PopupAnchor, WindowCoordinatorState,
     };
+
+    #[test]
+    fn dragging_stays_visible_and_only_release_can_hide_half() {
+        let mut anchor = PopupAnchor {
+            rect: (-10000.0, 10000.0, 104.0, 104.0),
+            monitor: (0.0, 0.0, 3200.0, 1904.0),
+            scale: 2.0,
+        };
+        assert_eq!(
+            super::bounded_floating_position(anchor, false),
+            (0.0, 1800.0)
+        );
+        assert_eq!(
+            super::bounded_floating_position(anchor, true),
+            (-52.0, 1800.0)
+        );
+        anchor.rect.0 = 10000.0;
+        assert_eq!(
+            super::bounded_floating_position(anchor, false),
+            (3096.0, 1800.0)
+        );
+        assert_eq!(
+            super::bounded_floating_position(anchor, true),
+            (3148.0, 1800.0)
+        );
+    }
 
     #[test]
     fn floating_docks_halfway_at_both_edges_without_changing_middle_positions() {

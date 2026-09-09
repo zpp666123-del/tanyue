@@ -141,9 +141,9 @@ namespace TanYue {
         const dx = event.clientX - startX;
         const dy = event.clientY - startY;
         if (Math.hypot(dx, dy) > 5) this.moved = true;
-        const maxLeft = window.innerWidth - shell.offsetWidth / 2;
+        const maxLeft = Math.max(0, window.innerWidth - shell.offsetWidth);
         const maxTop = Math.max(12, window.innerHeight - shell.offsetHeight - 12);
-        shell.style.left = `${clamp(originLeft + dx, -shell.offsetWidth / 2, maxLeft)}px`;
+        shell.style.left = `${clamp(originLeft + dx, 0, maxLeft)}px`;
         shell.style.top = `${clamp(originTop + dy, 12, maxTop)}px`;
         shell.style.right = "auto";
         shell.style.bottom = "auto";

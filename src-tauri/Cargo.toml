@@ -1,7 +1,7 @@
 [package]
 name = "tanyue"
 default-run = "tanyue"
-version = "0.2.6"
+version = "0.2.7"
 description = "弹阅：本地优先的桌面微阅读工具"
 authors = ["General Consulting"]
 edition = "2021"

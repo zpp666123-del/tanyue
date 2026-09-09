@@ -12,6 +12,10 @@ const assert = require('node:assert/strict');
     return { position: await win.outerPosition(), size: await win.outerSize(), scale: await win.scaleFactor(), monitor: await window.__TAURI__.window.currentMonitor(), screenX, screenY };
   });
   let g = await geometry();
+  await page.evaluate(() => TanYue.DesktopBridge.moveFloatingWidget(-10000, 10000, false));
+  g = await geometry();
+  assert.equal(g.position.x + (g.size.width - 52 * g.scale) / 2, g.monitor.workArea.position.x, 'drag clamps left visible edge');
+  assert.equal(g.position.y + g.size.height, g.monitor.workArea.position.y + g.monitor.workArea.size.height, 'drag stays above taskbar');
   await page.evaluate(({ x, y }) => TanYue.DesktopBridge.moveFloatingWidget(x, y, false), {
     x: (g.monitor.position.x + g.monitor.size.width - g.size.width / 2) / g.scale - 40,
     y: 300
