@@ -11,7 +11,7 @@ namespace TanYue {
     return `<span class="brand-glyph ${extraClass}" aria-hidden="true"><i></i><i></i><b></b></span>`;
   }
 
-  export function renderAppShell(state: AppState): string {
+  export function renderAppShell(state: AppState, update: UpdateUiState): string {
     const selected = state.selectedView;
     const current = currentSegment(state);
     const activeBook = currentBook(state);
@@ -42,7 +42,7 @@ namespace TanYue {
         </aside>
         <main class="main-area">
           ${renderTopbar(state)}
-          <section class="view-host" id="view-host">${renderView(state)}</section>
+          <section class="view-host" id="view-host">${renderView(state, update)}</section>
         </main>
       </div>
       <div id="overlay-host"></div>
@@ -65,12 +65,12 @@ namespace TanYue {
       </header>`;
   }
 
-  export function renderView(state: AppState): string {
+  export function renderView(state: AppState, update: UpdateUiState): string {
     switch (state.selectedView) {
       case "library": return renderLibraryView(state);
       case "plan": return renderPlanView(state);
       case "favorites": return renderFavoritesView(state);
-      case "settings": return renderSettingsView(state);
+      case "settings": return renderSettingsView(state, update);
       case "today":
       default: return renderTodayView(state);
     }
@@ -86,7 +86,7 @@ namespace TanYue {
           ${book.id === currentBookId ? '<span class="current-book-badge">正在读</span>' : ""}
           <h3 title="${escapeHtml(book.title)}">${escapeHtml(book.title)}</h3>
           <p>${escapeHtml(book.author || "未署名")}</p>
-          <div class="continue-progress-copy"><span>已读 ${progress.read} / ${progress.total} 段</span><b>${progress.percent}%</b></div>
+          <div class="continue-progress-copy"><span>确认读完 ${progress.read} / ${progress.total} 段 · 浏览 ${progress.browsed} 段</span><b>${progress.percent}%</b></div>
           ${progressBar(progress.percent)}
           <button class="continue-inline" data-action="continue-book" data-book-id="${book.id}">${icon("play", 12)}${progress.percent === 100 ? "重新阅读" : next ? `继续第 ${next.sequence} 段` : "继续阅读"}${next ? `<small>${escapeHtml(next.chapterTitle)}</small>` : ""}</button>
         </div>
@@ -101,8 +101,6 @@ namespace TanYue {
     const books = booksForContinueReading(state, 1);
     const slots = getUpcomingSlots(state.schedule, new Date(), 3);
     const dailyPercent = Math.min(100, Math.round((summary.confirmed / Math.max(1, state.schedule.dailyCount)) * 100));
-    const weekdayLabels = ["一", "二", "三", "四", "五", "六", "日"];
-    const todayIndex = (new Date().getDay() + 6) % 7;
 
     return `
       <div class="page page-today minimal-today">
@@ -116,7 +114,7 @@ namespace TanYue {
           <article class="today-summary-card">
             <span>今日阅读</span>
             <div class="today-summary-metrics">
-              <div>${icon("clock", 19)}<strong>${Math.max(summary.minutes, 0)}</strong><small>分钟</small></div>
+              <div title="按确认读完的片段估算，不是实际计时">${icon("clock", 19)}<strong>${Math.max(summary.minutes, 0)}</strong><small>分钟（预计）</small></div>
               <div>${icon("note", 19)}<strong>${summary.confirmed}</strong><small>段</small></div>
               <div>${icon("heart", 19)}<strong>${summary.favorites}</strong><small>条</small></div>
             </div>
@@ -137,8 +135,7 @@ namespace TanYue {
             <header><div><span>阅读计划</span><small>保持轻量，才容易坚持</small></div><button data-action="navigate" data-view="plan">编辑计划</button></header>
             <div class="plan-progress-title"><strong>每日精读 · ${state.schedule.dailyCount} 段</strong><span>${summary.confirmed} / ${state.schedule.dailyCount} 段</span></div>
             <div class="apple-progress"><span style="width:${dailyPercent}%"></span></div>
-            <p>坚持阅读第 12 天 · 已积累 ${state.segments.filter((item) => item.status === "confirmed").length} 段</p>
-            <div class="streak-days">${weekdayLabels.map((label, index) => `<div class="${index < todayIndex ? "done" : index === todayIndex ? "today" : ""}"><span>${label}</span><i>${21 + index}</i></div>`).join("")}</div>
+            <p>累计确认读完 ${state.segments.filter((item) => item.status === "confirmed").length} 段 · 按自己的节奏阅读</p>
           </article>
 
           <article class="apple-card today-plan-card">
@@ -203,7 +200,7 @@ namespace TanYue {
                     <h3>${escapeHtml(book.title)}</h3>
                     <p>${escapeHtml(book.author)}</p>
                     ${progressBar(progress.percent)}
-                    <small>${progress.read}/${progress.total} 已读 · ${book.totalChars.toLocaleString()} 字</small>
+                    <small>确认读完 ${progress.read}/${progress.total} · 浏览 ${progress.browsed} 段</small>
                     ${resumeTarget ? `<span class="book-resume-copy" title="${escapeHtml(resumeTarget.chapterTitle)}">${icon(completed ? "rotate" : "play", 11)}<span>${completed ? "已读完，可重新阅读" : `从第 ${resumeTarget.sequence} 段 · ${escapeHtml(resumeTarget.chapterTitle)} 继续`}</span></span>` : ""}
                   </div>
                 </button>
@@ -331,7 +328,42 @@ namespace TanYue {
       </div>`;
   }
 
-  function renderSettingsView(state: AppState): string {
+  function renderUpdateStatus(update: UpdateUiState): string {
+    switch (update.phase) {
+      case "idle":
+        return "";
+      case "checking":
+        return `<div class="update-status"><span class="update-status-text">正在检查更新…</span></div>`;
+      case "up-to-date":
+        return `<div class="update-status update-status-good"><span class="update-status-text">已是最新版本 v${escapeHtml(update.currentVersion || "")}</span></div>`;
+      case "available": {
+        const announcement = update.announcement;
+        if (!announcement) return "";
+        return `<div class="update-status update-status-available">
+          <span class="update-status-text">发现新版本 <strong>v${escapeHtml(announcement.version)}</strong>（当前 v${escapeHtml(announcement.currentVersion)}）</span>
+          ${announcement.notes ? `<p class="update-notes">${escapeHtml(announcement.notes)}</p>` : ""}
+          <div><button class="secondary-button compact" data-action="download-update">${icon("download", 15)}下载更新</button></div>
+        </div>`;
+      }
+      case "downloading": {
+        const progress = update.progress;
+        const percent = progress?.percent ?? null;
+        const totalText = progress?.total ? ` / ${formatDownloadSize(progress.total)}` : "";
+        return `<div class="update-status"><span class="update-status-text">正在下载更新… ${percent !== null ? `${percent}% · ` : ""}${formatDownloadSize(progress?.downloaded || 0)}${totalText}</span></div>`;
+      }
+      case "ready":
+        return `<div class="update-status update-status-good">
+          <span class="update-status-text">更新已下载并验签，点击后安装并重启。</span>
+          <div><button class="primary-button compact" data-action="install-update">重启并安装</button></div>
+        </div>`;
+      case "error":
+        return `<div class="update-status update-status-error"><span class="update-status-text">${escapeHtml(update.error || "检查更新失败")}</span><div><button class="text-button" data-action="check-update">${icon("rotate", 14)}重试</button></div></div>`;
+      default:
+        return "";
+    }
+  }
+
+  function renderSettingsView(state: AppState, update: UpdateUiState): string {
     const mode = DesktopBridge.isTauri() ? "Tauri 桌面模式" : "浏览器演示模式";
     const fontScale = normalizeReadingFontScale(state.settings.fontScale);
     const fontScalePercent = Math.round(fontScale * 100);
@@ -365,7 +397,17 @@ namespace TanYue {
               </div>
               <div class="setting-block-row"><span class="setting-copy"><strong>弹窗占屏上限</strong><small>${popupSizeDescription[state.settings.popupSizeMode]}</small></span><div class="segmented-control"><button data-action="set-popup-size" data-popup-size="adaptive" class="${state.settings.popupSizeMode === "adaptive" ? "active" : ""}">自适应</button><button data-action="set-popup-size" data-popup-size="compact" class="${state.settings.popupSizeMode === "compact" ? "active" : ""}">紧凑</button><button data-action="set-popup-size" data-popup-size="small" class="${state.settings.popupSizeMode === "small" ? "active" : ""}">小窗</button></div></div>
               ${toggleControl("showExplanation", state.settings.showExplanation, "默认显示一句话理解", "辅助解释与原文始终分层展示")}
+              ${toggleControl("adSkin", state.settings.adSkin, "摸鱼广告皮肤", "阅读卡片换成广告外观，正文与操作保持不变")}
               ${toggleControl("reduceMotion", state.settings.reduceMotion, "减少动画", "降低弹窗和侧栏的过渡效果")}
+            </article>
+
+            <article class="panel settings-section">
+              <header class="settings-section-header"><div class="settings-section-icon">${icon("download", 20)}</div><div><h3>关于与更新</h3><p>本地优先，需要时再联网</p></div></header>
+              <div class="setting-block-row">
+                <span class="setting-copy"><strong>当前版本</strong><small>${update.currentVersion ? `v${escapeHtml(update.currentVersion)}` : `${APP_VERSION}（桌面版运行后显示实际版本）`}</small></span>
+                <button class="secondary-button compact" data-action="check-update" ${["checking", "downloading", "ready"].includes(update.phase) ? "disabled" : ""}>${update.phase === "checking" ? "检查中…" : "检查更新"}</button>
+              </div>
+              ${renderUpdateStatus(update)}
             </article>
 
           </div>
@@ -374,6 +416,9 @@ namespace TanYue {
             <article class="data-card">
               <span class="eyebrow">本地数据</span><h3>${state.books.length} 个来源</h3><p>${state.segments.length} 个片段 · ${state.events.length} 条行为记录</p>
               <button class="secondary-button full-width" data-action="export-data">${icon("download", 16)}导出全部数据</button>
+              <button class="secondary-button full-width" data-action="restore-data">${icon("rotate", 16)}从备份恢复</button>
+              <input id="restore-input" type="file" accept=".json" hidden>
+              ${!DesktopBridge.isTauri() ? '<button class="text-button full-width" data-action="export-restore-backup">导出恢复前备份</button>' : ""}
               <button class="text-button danger-text full-width" data-action="reset-demo">${icon("rotate", 15)}恢复初始内容</button>
             </article>
             <article class="panel shortcut-card">
@@ -404,6 +449,30 @@ namespace TanYue {
         </div>
       </section>`;
     return modalShell("import-modal", "添加阅读内容", "外部 Agent 负责解析和切片，弹阅会重新检查原文覆盖后再入库。", content, true);
+  }
+
+  export function renderImportPreview(results: ImportResult[], errors: string[] = []): string {
+    const content = `${errors.length ? `<div role="alert"><h3>以下文件未能导入</h3><ul>${errors.map((error) => `<li>${escapeHtml(error)}</li>`).join("")}</ul></div>` : ""}
+      ${results.map((result) => `<article class="import-preview-book">
+        <h3>${escapeHtml(result.book.title)}</h3>
+        <p>${result.segments.length} 个片段 · ${result.book.totalChars.toLocaleString()} 字 · 正文覆盖率 ${result.coverage.coveragePercent}%</p>
+        ${result.warnings.length ? `<ul>${result.warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}</ul>` : ""}
+        ${result.segments.slice(0, 3).map((segment) => `<details><summary>第 ${segment.sequence} 段 · ${escapeHtml(segment.chapterTitle)} · 约 ${segment.estimatedSeconds} 秒</summary><p class="import-preview-text">${escapeHtml(segment.originalText)}</p></details>`).join("")}
+      </article>`).join("")}
+      <p>覆盖率只验证导入内容的完整性，请检查样例是否有乱码、错序或缺失。</p>
+      <p id="import-save-status" role="status" aria-live="polite"></p>
+      <div class="modal-actions"><button class="secondary-button" data-action="close-modal">取消</button>${results.length ? '<button class="primary-button" data-action="confirm-import">确认导入</button>' : ""}</div>`;
+    return modalShell("import-preview", "检查导入内容", "确认后保存到本机书架。", content, true);
+  }
+
+  export function renderRestorePreview(current: AppState, incoming: AppState): string {
+    const summary = (state: AppState): string => `${state.books.length} 本书、${state.segments.length} 段、${state.segments.filter((item) => item.status === "confirmed").length} 段确认读完、${state.segments.filter((item) => item.favorite).length} 条收藏、${state.segments.filter((item) => item.note.trim()).length} 条笔记`;
+    return modalShell("restore-preview", "从备份恢复", "这会替换当前书库、阅读进度、收藏、笔记与阅读计划。", `
+      <p>当前：${summary(current)}</p><p>备份：${summary(incoming)}</p>
+      <ul>${incoming.books.map((book) => `<li>${escapeHtml(book.title)}</li>`).join("")}</ul>
+      <p>恢复前会自动保存当前完整数据，备份失败时不会执行恢复。系统开机启动保持当前设置。</p>
+      <p id="restore-status" role="status" aria-live="polite"></p>
+      <div class="modal-actions"><button class="secondary-button" data-action="close-modal">取消</button><button class="primary-button" data-action="confirm-restore">备份当前数据并恢复</button></div>`);
   }
 
   export function renderBookModal(state: AppState, bookId: string): string {

@@ -80,8 +80,8 @@ namespace TanYue {
       return Boolean(result);
     }
 
-    static async startFloatingWidgetDrag(): Promise<boolean> {
-      const result = await this.invoke<boolean>("start_floating_widget_drag");
+    static async moveFloatingWidget(x: number, y: number, settle: boolean): Promise<boolean> {
+      const result = await this.invoke<boolean>("move_floating_widget", { x, y, settle });
       return Boolean(result);
     }
 
@@ -235,6 +235,84 @@ namespace TanYue {
       } catch {
         return () => undefined;
       }
+    }
+  }
+
+  export interface UpdateAnnouncement {
+    version: string;
+    notes: string | null;
+    pubDate: string | null;
+    currentVersion: string;
+  }
+
+  export interface UpdateDownloadProgress {
+    downloaded: number;
+    total: number | null;
+    percent: number | null;
+  }
+
+  export class UpdaterBridge {
+    private static pendingUpdate: UpdaterUpdate | null = null;
+    static isSupported(): boolean {
+      return Boolean(window.__TAURI__?.updater?.check && window.__TAURI__?.process?.relaunch);
+    }
+
+    static async currentVersion(): Promise<string | null> {
+      try {
+        if (!window.__TAURI__?.app?.getVersion) return null;
+        return await window.__TAURI__.app.getVersion();
+      } catch {
+        return null;
+      }
+    }
+
+    static async check(): Promise<UpdateAnnouncement | null> {
+      const api = window.__TAURI__?.updater;
+      if (!api?.check) return null;
+      await this.pendingUpdate?.close();
+      this.pendingUpdate = null;
+      const update = await api.check();
+      if (!update) return null;
+      this.pendingUpdate = update;
+      return {
+        version: update.version,
+        notes: update.notes ?? update.body ?? null,
+        pubDate: update.date ?? null,
+        currentVersion: update.currentVersion
+      };
+    }
+
+    static async download(
+      onProgress: (progress: UpdateDownloadProgress) => void
+    ): Promise<void> {
+      const update = this.pendingUpdate;
+      if (!update) throw new Error("未发现新版本。");
+      let downloaded = 0;
+      let total: number | null = null;
+      await update.download((event) => {
+        if (event.event === "Started") {
+          downloaded = 0;
+          total = event.data.contentLength && event.data.contentLength > 0 ? event.data.contentLength : null;
+          onProgress({ downloaded, total, percent: total ? 0 : null });
+        } else if (event.event === "Progress") {
+          downloaded += event.data.chunkLength ?? 0;
+          onProgress({
+            downloaded,
+            total,
+            percent: total ? Math.min(100, Math.round(downloaded / total * 100)) : null
+          });
+        } else if (event.event === "Finished") {
+          onProgress({ downloaded, total, percent: 100 });
+        }
+      });
+    }
+
+    static async relaunch(): Promise<void> {
+      if (!this.pendingUpdate) throw new Error("请先下载更新。");
+      await this.pendingUpdate.install();
+      const api = window.__TAURI__?.process;
+      if (!api?.relaunch) throw new Error("桌面重启组件不可用。");
+      await api.relaunch();
     }
   }
 }

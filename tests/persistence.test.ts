@@ -1,4 +1,44 @@
 namespace TanYueTests {
+  test("备份往返保持正文、进度、收藏和笔记，损坏文件被拒绝", () => {
+    const state = TanYue.createReleaseSeedState();
+    state.segments[0].favorite = true;
+    state.segments[0].note = "恢复测试";
+    TanYue.markConfirmed(state, state.segments[0].id);
+    const restored = TanYue.parseStateBackup(JSON.stringify(state));
+    equal(restored.segments[0].originalText, state.segments[0].originalText, "原文必须不变");
+    equal(restored.segments[0].note, "恢复测试", "笔记必须保留");
+    equal(restored.segments[0].favorite, true, "收藏必须保留");
+    equal(restored.segments[0].status, "confirmed", "确认进度必须保留");
+    const corrupted = TanYue.deepClone(state);
+    corrupted.segments[0].originalText += "篡改";
+    throws(() => TanYue.parseStateBackup(JSON.stringify(corrupted)), "哈希");
+    corrupted.segments[0] = state.segments[0];
+    corrupted.segments[1].sequence = 1;
+    throws(() => TanYue.parseStateBackup(JSON.stringify(corrupted)), "顺序");
+    throws(() => TanYue.parseStateBackup('{"schemaVersion":99}'), "版本");
+    throws(() => TanYue.parseStateBackup("null"), "必须是对象");
+  });
+
+  test("恢复前必须留下备份，备份失败不覆盖原数据", async () => {
+    const storage = new MemoryStorage();
+    const repository = new TanYue.BrowserLocalStorageRepository(storage);
+    const original = TanYue.createReleaseSeedState();
+    await repository.save(original);
+    const next = TanYue.deepClone(original);
+    next.segments[0].note = "恢复后的笔记";
+    await repository.restore(next);
+    equal(TanYue.parseStateBackup(storage.getItem(TanYue.RESTORE_BACKUP_KEY)!).segments[0].note, original.segments[0].note, "恢复前备份可读回");
+    equal((await repository.load())?.segments[0].note, next.segments[0].note, "新数据已落盘");
+    const before = storage.getItem(TanYue.STORAGE_KEY);
+    const failing = new TanYue.BrowserLocalStorageRepository({
+      getItem: (key) => storage.getItem(key), removeItem: () => undefined,
+      setItem: () => { throw new Error("quota exceeded"); }
+    });
+    let failed = false;
+    try { await failing.restore(original); } catch { failed = true; }
+    assert(failed, "备份写入失败必须终止");
+    equal(storage.getItem(TanYue.STORAGE_KEY), before, "失败不能改变当前数据");
+  });
   class MemoryStorage implements TanYue.StorageLike {
     private readonly values = new Map<string, string>();
 

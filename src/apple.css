@@ -284,11 +284,6 @@ button { transition: box-shadow .16s ease, background .16s ease, color .16s ease
 .apple-progress { height: 5px; margin: 11px 0 14px; overflow: hidden; border-radius: 99px; background: var(--line); }
 .apple-progress span { height: 100%; display: block; border-radius: inherit; background: linear-gradient(90deg, #c65434, #e2825e); }
 .reading-plan-card > p { margin: 0; color: var(--text-faint); font-size: 10px; }
-.streak-days { margin-top: 16px; display: grid; grid-template-columns: repeat(7,1fr); gap: 8px; }
-.streak-days > div { display: grid; justify-items: center; gap: 8px; color: var(--text-faint); font-size: 9px; }
-.streak-days i { width: 29px; height: 29px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line); color: var(--text-faint); font-style: normal; }
-.streak-days .done i { border-color: transparent; color: #fff; background: var(--accent); }
-.streak-days .today i { border-color: color-mix(in srgb,var(--accent) 30%, transparent); color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 5px color-mix(in srgb,var(--accent-soft) 50%, transparent); }
 .timeline-list { margin-top: 12px; display: grid; }
 .timeline-item { min-height: 45px; display: grid; grid-template-columns: 14px 52px minmax(0,1fr) auto; align-items: center; gap: 9px; position: relative; padding: 4px 0; }
 .timeline-item:not(:last-child)::after { content: ""; position: absolute; left: 6px; top: 31px; bottom: -14px; width: 1px; background: var(--line); }
@@ -411,7 +406,7 @@ body.popup-window .popup-drag-edge:active { cursor: grabbing; }
 html.floating-html, html.floating-html body { width: 100%; height: 100%; min-height: 0; overflow: hidden; background: transparent !important; }
 body.floating-window #app { display: none; }
 .floating-widget-shell { z-index: 250; display: grid; place-items: center; }
-.floating-widget-shell.browser-overlay { position: fixed; right: 22px; bottom: 24px; grid-template-columns: auto auto; gap: 10px; }
+.floating-widget-shell.browser-overlay { position: fixed; right: 22px; bottom: 24px; width: 48px; height: 48px; }
 .floating-widget-shell.standalone { position: fixed; inset: 0; }
 .floating-drag-strip { position: absolute; inset: 0; z-index: 0; border-radius: 24px; }
 .floating-orb {
@@ -427,7 +422,10 @@ body.floating-window #app { display: none; }
   background: transparent;
   box-shadow: 0 3px 8px rgba(54,43,37,.18);
 }
-.floating-orb:hover { box-shadow: 0 22px 52px rgba(54,43,37,.22), 0 4px 14px rgba(54,43,37,.08); }
+.floating-orb, .floating-orb:hover { box-shadow: none; touch-action: none; }
+.floating-widget-shell { filter: none; }
+.floating-widget-shell.standalone .floating-orb { overflow: hidden; }
+.floating-logo { padding: 0; }
 .floating-logo { width: 48px; height: 48px; display: block; position: relative; border-radius: 15px; background: linear-gradient(150deg,#e17a55,#b9492d); box-shadow: inset 0 1px rgba(255,255,255,.35); }
 .floating-logo i { position: absolute; top: 9px; bottom: 9px; width: 11px; background: rgba(255,255,255,.93); }
 .floating-logo i:first-child { left: 9px; border-radius: 3px 5px 5px 3px; transform: skewY(-7deg); }
@@ -439,6 +437,13 @@ body.floating-window #app { display: none; }
 .floating-widget-shell:hover .floating-tooltip { opacity: 1; transform: none; }
 .floating-widget-shell.dragging { user-select: none; }
 .floating-widget-shell.dragging .floating-orb { cursor: grabbing; transform: scale(.98); }
+
+.popup-ad-skin .popup-app-header { background: #edf2f6; border-bottom: 1px solid #dce3e9; }
+.popup-ad-skin .popup-app-identity strong { color: #617184; font-size: 12px; font-weight: 500; }
+.popup-ad-skin .popup-app-logo { background: #74899b; }
+.popup-ad-skin .popup-app-logo .brand-glyph { display: none; }
+.popup-ad-skin .popup-app-logo::after { content: "AD"; color: white; font: 600 10px system-ui; }
+.popup-ad-skin .popup-next { background: #55758d; border-color: #55758d; }
 
 @media (max-width: 1080px) {
   .minimal-hero { grid-template-columns: 1fr; }
@@ -479,3 +484,9 @@ body.floating-window #app { display: none; }
 /* 高频操作只改变颜色和阴影，不移动控件；悬浮入口保留拖拽反馈。 */
 button:not(.floating-orb):hover,
 button:not(.floating-orb):active { transform: none; }
+
+.import-preview-book { padding-block: 16px; border-bottom: 1px solid var(--line); }
+.import-preview-book summary { cursor: pointer; padding-block: 8px; }
+.import-preview-text { white-space: pre-wrap; line-height: 1.8; max-height: 260px; overflow: auto; }
+.backup-location { overflow-wrap: anywhere; user-select: text; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }

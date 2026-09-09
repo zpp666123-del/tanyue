@@ -18,8 +18,6 @@ namespace TanYue {
   }
 
   function mergeState(saved: Partial<AppState>, fallback: AppState): AppState {
-    const settings = { ...fallback.settings, ...(saved.settings || {}) };
-    settings.fontScale = normalizeReadingFontScale(settings.fontScale);
     return {
       ...fallback,
       ...saved,
@@ -29,8 +27,8 @@ namespace TanYue {
         ? saved.segments.map(hydrateSegmentTrace)
         : fallback.segments,
       events: Array.isArray(saved.events) ? saved.events : fallback.events,
-      schedule: { ...fallback.schedule, ...(saved.schedule || {}) },
-      settings
+      schedule: normalizeSchedule({ ...fallback.schedule, ...(saved.schedule || {}) }),
+      settings: normalizeSettings({ ...fallback.settings, ...(saved.settings || {}) })
     };
   }
 
@@ -293,6 +291,7 @@ namespace TanYue {
     confirmed: number;
     dismissed: number;
     read: number;
+    browsed: number;
     shown: number;
     total: number;
     percent: number;
@@ -300,15 +299,24 @@ namespace TanYue {
     const segments = getBookSegments(state, bookId);
     const confirmed = segments.filter((segment) => segment.status === "confirmed").length;
     const dismissed = segments.filter((segment) => segment.status !== "confirmed" && Boolean(segment.dismissedAt)).length;
-    const read = confirmed + dismissed;
+    const read = confirmed;
+    const browsed = confirmed + dismissed;
     const shown = segments.filter((segment) => segment.status !== "unread").length;
     return {
       confirmed,
       dismissed,
       read,
+      browsed,
       shown,
       total: segments.length,
-      percent: segments.length ? Math.round((read / segments.length) * 100) : 0
+      percent: segments.length ? Math.floor((read / segments.length) * 100) : 0
     };
+  }
+
+  export function bookCompletionMessage(state: AppState, book: Book): string {
+    const progress = progressForBook(state, book.id);
+    return progress.read === progress.total
+      ? `已确认读完《${book.title}》`
+      : `已到《${book.title}》末段，确认读完 ${progress.read}/${progress.total} 段`;
   }
 }

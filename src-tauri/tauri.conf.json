@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "弹阅",
-  "version": "0.2.3",
+  "version": "0.2.6",
   "identifier": "com.generalconsulting.tanyue",
   "build": {
     "beforeDevCommand": "npm run build:cli && npm run dev",
@@ -30,9 +30,21 @@
       "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https: http://127.0.0.1:*; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'self'"
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDU1MzIyODBGNEREMjdFN0MKUldSOGZ0Sk5EeWd5VlQyM0Q0aVlua2Y5RE4rajNHVDZpa3o1TEdKK1FzR2tOME5iemtZc2FFc2sK",
+      "endpoints": [
+        "https://github.com/zpp666123-del/tanyue/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
   "bundle": {
     "active": true,
     "targets": ["nsis"],
+    "createUpdaterArtifacts": true,
     "externalBin": ["binaries/tanyue-cli"],
     "category": "Productivity",
     "shortDescription": "少而精地读，深而静地思。",

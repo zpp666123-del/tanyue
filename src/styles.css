@@ -449,11 +449,11 @@ kbd { min-width: 23px; padding: 2px 6px; border: 1px solid var(--line); border-b
 .ai-config label { display: grid; gap: 6px; padding-top: 15px; }
 .ai-config input, .ai-config select { width: 100%; padding: 0 9px; }
 .security-note { grid-column: 1 / -1; display: flex; align-items: flex-start; gap: 8px; padding: 11px; border-radius: 10px; color: var(--text-soft); background: var(--surface-soft); font-size: 10px; line-height: 1.5; }
-.data-card { padding: 19px; border-radius: var(--radius-lg); color: #f8f5ed; background: linear-gradient(150deg, #6f493b, #4e342c); box-shadow: var(--shadow-md); }
+.data-card { padding: 19px; border-radius: var(--radius-lg); color: var(--text); background: var(--surface); box-shadow: var(--shadow-md); }
 .data-card h3 { margin: 8px 0 3px; font-family: var(--serif); font-size: 24px; }
-.data-card p { margin: 0 0 17px; color: rgba(255,255,255,.58); font-size: 11px; }
-.data-card .secondary-button { color: #fff; border-color: rgba(255,255,255,.17); background: rgba(255,255,255,.08); }
-.data-card .text-button { margin-top: 8px; color: rgba(255,255,255,.56); justify-content: center; }
+.data-card p { margin: 0 0 17px; color: var(--text-soft); font-size: 11px; }
+.data-card .secondary-button { margin-top: 8px; }
+.data-card .text-button { margin-top: 8px; justify-content: center; }
 .shortcut-card { padding: 18px; }
 .shortcut-card > span { margin-bottom: 10px; }
 .shortcut-card > div { min-height: 39px; display: flex; align-items: center; gap: 5px; border-top: 1px solid var(--line); }

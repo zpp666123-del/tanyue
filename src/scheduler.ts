@@ -97,6 +97,7 @@ namespace TanYue {
       date.setDate(now.getDate() + dayOffset);
       date.setHours(0, 0, 0, 0);
       generateDailySlots(date, schedule).forEach((slot) => {
+        if (isQuietTime(slot.at, schedule)) return;
         if (slot.at.getTime() <= now.getTime()) return;
         if (blockedUntil && slot.at.getTime() < blockedUntil.getTime()) return;
         slots.push(slot);
@@ -107,6 +108,15 @@ namespace TanYue {
 
   export function computeNextDue(schedule: ReadingSchedule, now = new Date()): Date | null {
     return getUpcomingSlots(schedule, now, 1)[0]?.at || null;
+  }
+
+  export function dueReminderSlot(schedule: ReadingSchedule, now: Date, previousTick: number): UpcomingSlot | null {
+    const elapsed = now.getTime() - previousTick;
+    if (!schedule.enabled || elapsed < 0 || elapsed > 60_000 || activeReminderPause(schedule, now) || isQuietTime(now, schedule)) return null;
+    return generateDailySlots(now, schedule).find((slot) => {
+      const age = now.getTime() - slot.at.getTime();
+      return age >= 0 && age < 30_000 && !isQuietTime(slot.at, schedule) && slot.at.toISOString() !== schedule.lastTriggeredSlot;
+    }) || null;
   }
 
   export function dailySummary(state: AppState, date = new Date()): DailySummary {

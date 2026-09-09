@@ -42,18 +42,15 @@ namespace TanYue {
     }
 
     refresh(): void {
-      if (this.standalone) this.mountStandalone();
-      else this.mountOverlay(this.getState().settings.floatingWidget);
+      if (!this.standalone) this.mountOverlay(this.getState().settings.floatingWidget);
     }
 
     private render(standalone: boolean): string {
       const state = this.getState();
       const segment = currentSegment(state);
-      const title = segment ? `${segment.chapterTitle} · ${segment.helperTitle}` : "书架为空，点击导入内容";
       return `
         <div id="floating-widget-shell" class="floating-widget-shell ${standalone ? "standalone" : "browser-overlay"}">
-          ${standalone ? '<div class="floating-drag-strip" data-tauri-drag-region title="拖动悬浮图标"></div>' : ""}
-          <button class="floating-orb" type="button" aria-label="${segment ? "打开弹阅阅读卡片" : "打开弹阅并导入内容"}" title="${escapeHtml(title)}">
+          <button class="floating-orb" type="button" aria-label="打开弹阅阅读卡片">
             <span class="floating-logo" aria-hidden="true"><i></i><i></i><b></b></span>
           </button>
           ${standalone ? "" : `<span class="floating-tooltip"><strong>${BRAND.name}</strong><small>${segment ? `${escapeHtml(segment.chapterTitle)} · ${segment.estimatedSeconds} 秒` : "书架为空"}</small></span>`}
@@ -69,32 +66,54 @@ namespace TanYue {
         let startX = 0;
         let startY = 0;
         let dragging = false;
+        let originX = 0;
+        let originY = 0;
+        let pending: { x: number; y: number; settle: boolean } | null = null;
+        let sending = false;
+        const move = async (event: PointerEvent, settle: boolean) => {
+          pending = { x: originX + event.screenX - startX, y: originY + event.screenY - startY, settle };
+          if (sending) return;
+          sending = true;
+          try {
+            while (pending) {
+              const position = pending;
+              pending = null;
+              await DesktopBridge.moveFloatingWidget(position.x, position.y, position.settle);
+            }
+          } finally { sending = false; }
+        };
 
         orb.addEventListener("pointerdown", (event) => {
           if (event.button !== 0) return;
           pointerId = event.pointerId;
-          startX = event.clientX;
-          startY = event.clientY;
+          startX = event.screenX;
+          startY = event.screenY;
+          originX = window.screenX;
+          originY = window.screenY;
           dragging = false;
           orb.setPointerCapture(pointerId);
         });
         orb.addEventListener("pointermove", (event) => {
-          if (event.pointerId !== pointerId || dragging) return;
-          if (Math.hypot(event.clientX - startX, event.clientY - startY) <= 4) return;
+          if (event.pointerId !== pointerId) return;
+          if (!dragging && Math.hypot(event.screenX - startX, event.screenY - startY) <= 4) return;
           dragging = true;
           shell.classList.add("dragging");
-          void DesktopBridge.startFloatingWidgetDrag();
+          void move(event, false);
         });
         const finishStandalone = (event: PointerEvent) => {
           if (event.pointerId !== pointerId) return;
           if (orb.hasPointerCapture(pointerId)) orb.releasePointerCapture(pointerId);
           shell.classList.remove("dragging");
           pointerId = -1;
-          if (!dragging) void this.onOpen();
+          if (dragging) void move(event, true);
+          if (!dragging && event.type === "pointerup") void this.onOpen();
         };
         orb.addEventListener("pointerup", finishStandalone);
         orb.addEventListener("pointercancel", finishStandalone);
-        orb.addEventListener("click", (event) => event.preventDefault());
+        orb.addEventListener("click", (event) => {
+          event.preventDefault();
+          if (event.detail === 0) void this.onOpen();
+        });
         return;
       }
 
@@ -122,9 +141,9 @@ namespace TanYue {
         const dx = event.clientX - startX;
         const dy = event.clientY - startY;
         if (Math.hypot(dx, dy) > 5) this.moved = true;
-        const maxLeft = Math.max(12, window.innerWidth - shell.offsetWidth - 12);
+        const maxLeft = window.innerWidth - shell.offsetWidth / 2;
         const maxTop = Math.max(12, window.innerHeight - shell.offsetHeight - 12);
-        shell.style.left = `${clamp(originLeft + dx, 12, maxLeft)}px`;
+        shell.style.left = `${clamp(originLeft + dx, -shell.offsetWidth / 2, maxLeft)}px`;
         shell.style.top = `${clamp(originTop + dy, 12, maxTop)}px`;
         shell.style.right = "auto";
         shell.style.bottom = "auto";
@@ -135,13 +154,20 @@ namespace TanYue {
         if (orb.hasPointerCapture(pointerId)) orb.releasePointerCapture(pointerId);
         shell.classList.remove("dragging");
         pointerId = -1;
-        if (this.moved) this.savePosition(shell);
-        else void this.onOpen();
+        if (this.moved) {
+          const rect = shell.getBoundingClientRect();
+          if (rect.left <= 24) shell.style.left = `${-rect.width / 2}px`;
+          else if (rect.right >= window.innerWidth - 24) shell.style.left = `${window.innerWidth - rect.width / 2}px`;
+          this.savePosition(shell);
+        } else if (event.type === "pointerup") void this.onOpen();
       };
 
       orb.addEventListener("pointerup", finish);
       orb.addEventListener("pointercancel", finish);
-      orb.addEventListener("click", (event) => event.preventDefault());
+      orb.addEventListener("click", (event) => {
+        event.preventDefault();
+        if (event.detail === 0) void this.onOpen();
+      });
     }
 
     private applySavedPosition(shell: HTMLElement): void {
@@ -149,9 +175,10 @@ namespace TanYue {
         const raw = window.localStorage.getItem(FLOATING_POSITION_KEY);
         if (!raw) return;
         const saved = JSON.parse(raw) as FloatingPosition;
-        const maxLeft = Math.max(12, window.innerWidth - shell.offsetWidth - 12);
+        if (!Number.isFinite(saved.left) || !Number.isFinite(saved.top)) throw new Error("Invalid position");
+        const maxLeft = window.innerWidth - shell.offsetWidth / 2;
         const maxTop = Math.max(12, window.innerHeight - shell.offsetHeight - 12);
-        shell.style.left = `${clamp(saved.left, 12, maxLeft)}px`;
+        shell.style.left = `${clamp(saved.left, -shell.offsetWidth / 2, maxLeft)}px`;
         shell.style.top = `${clamp(saved.top, 12, maxTop)}px`;
         shell.style.right = "auto";
         shell.style.bottom = "auto";

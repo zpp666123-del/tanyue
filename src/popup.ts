@@ -124,7 +124,7 @@ namespace TanYue {
         : `《${escapeHtml(book.title)}》 · ${escapeHtml(segment.chapterTitle)}`;
       return `
         <div class="popup-click-catcher" data-popup-action="close"></div>
-        <article class="reading-popup-card popup-size-${state.settings.popupSizeMode}" role="dialog" aria-modal="true" aria-label="${escapeHtml(book.title)}阅读片段">
+        <article class="reading-popup-card popup-size-${state.settings.popupSizeMode}${state.settings.adSkin ? " popup-ad-skin" : ""}" role="dialog" aria-modal="true" aria-label="${escapeHtml(book.title)}阅读片段">
           <span class="popup-drag-edge popup-drag-edge-top" data-popup-drag-handle aria-hidden="true"></span>
           <span class="popup-drag-edge popup-drag-edge-right" data-popup-drag-handle aria-hidden="true"></span>
           <span class="popup-drag-edge popup-drag-edge-bottom" data-popup-drag-handle aria-hidden="true"></span>
@@ -133,7 +133,7 @@ namespace TanYue {
             <span class="popup-titlebar-drag-region" data-popup-drag-handle aria-hidden="true"></span>
             <div class="popup-app-identity" data-popup-drag-handle title="拖动阅读卡片">
               <span class="popup-app-logo" data-popup-drag-handle><span class="brand-glyph"><i></i><i></i><b></b></span></span>
-              <div><strong>${BRAND.name}</strong><small>${BRAND.tagline}</small></div>
+              <div><strong>${state.settings.adSkin ? "精选推荐 · 广告" : BRAND.name}</strong><small>${state.settings.adSkin ? "给生活一点新灵感" : BRAND.tagline}</small></div>
             </div>
             <div class="popup-app-actions">
               <button class="popup-icon-button" data-popup-action="open-home" aria-label="打开弹阅首页" title="打开弹阅首页">${icon("external", 15)}</button>
@@ -307,7 +307,6 @@ namespace TanYue {
         return;
       }
       if (action === "continue") {
-        const completedBookTitle = book.title;
         markConfirmed(state, segment.id);
         const next = nextSegment(state, segment.id);
         if (!next) {
@@ -315,7 +314,7 @@ namespace TanYue {
           if (nextUnread) setCurrentSegment(state, nextUnread.id);
           if (!await this.persist(state)) return;
           await this.close();
-          if (!this.popupMode) toast(`已读完《${completedBookTitle}》`, "success");
+          if (!this.popupMode) toast(bookCompletionMessage(state, book), "success");
           return;
         }
         setCurrentSegment(state, next.id);

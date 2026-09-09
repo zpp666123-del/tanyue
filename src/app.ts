@@ -4,6 +4,9 @@ namespace TanYue {
     private popup: ReadingPopupController;
     private floating: FloatingWidgetController;
     private importDuration: 30 | 60 | 90;
+    private pendingImports: ImportResult[] = [];
+    private pendingRestore: AppState | null = null;
+    private dataOperationBusy = false;
     private librarySortMode: LibrarySortMode = "recent";
     private schedulerTimer: number | null = null;
     private pendingImportTimer: number | null = null;
@@ -16,6 +19,7 @@ namespace TanYue {
     private unlistenAppearancePreview: (() => void) | null = null;
     private persistence: StatePersistence;
     private persistenceCoordinator: PersistenceCoordinator;
+    private updateUi: UpdateUiState = createInitialUpdateUi();
 
     constructor() {
       this.state = createReleaseSeedState();
@@ -43,9 +47,16 @@ namespace TanYue {
           console.error("Failed to persist app state", error);
         });
         this.state = initialized.state;
+        // 桌面版用 SQLite，空间足够安装完整内置书目；浏览器预览用 LocalStorage
+        // （通常约 5MB 配额），装不下完整书库，只保留轻量的发行种子《道德经》。
+        const useFullLibrary = DesktopBridge.isTauri();
         if (initialized.createdFresh) {
           try {
-            await installBundledSeeds(this.state);
+            if (useFullLibrary) {
+              await installBundledSeeds(this.state);
+            } else {
+              this.state.contentSeedVersion = BUNDLED_SEED_VERSION;
+            }
             await this.persistence.save(this.state);
           } catch (error) {
             await this.persistence.reset();
@@ -53,7 +64,11 @@ namespace TanYue {
           }
         } else if (this.state.contentSeedVersion < BUNDLED_SEED_VERSION) {
           try {
-            await installBundledSeeds(this.state, undefined, undefined, true);
+            if (useFullLibrary) {
+              await installBundledSeeds(this.state, undefined, undefined, true);
+            } else {
+              this.state.contentSeedVersion = BUNDLED_SEED_VERSION;
+            }
             await this.persistence.save(this.state);
           } catch (error) {
             throw new Error(`内置书籍升级失败：${error instanceof Error ? error.message : String(error)}`);
@@ -97,6 +112,10 @@ namespace TanYue {
       }
       if (DesktopBridge.isTauri()) {
         await DesktopBridge.setFloatingWidget(this.state.settings.floatingWidget);
+        void UpdaterBridge.currentVersion().then((version) => {
+          this.updateUi = reduceUpdateUi(this.updateUi, { type: "fill-version", version });
+          this.render();
+        });
         await this.processPendingImportPackages();
         this.pendingImportTimer = window.setInterval(() => void this.processPendingImportPackages(), 2_000);
       }
@@ -112,7 +131,7 @@ namespace TanYue {
       const previousHost = root.querySelector<HTMLElement>("#view-host");
       const previousView = previousHost?.dataset.renderedView;
       const previousScrollTop = previousHost?.scrollTop || 0;
-      root.innerHTML = renderAppShell(this.state);
+      root.innerHTML = renderAppShell(this.state, this.updateUi);
       const nextHost = root.querySelector<HTMLElement>("#view-host");
       if (nextHost) {
         nextHost.dataset.renderedView = this.state.selectedView;
@@ -178,6 +197,7 @@ namespace TanYue {
     }
 
     private async onClick(event: MouseEvent): Promise<void> {
+      if (this.dataOperationBusy) return;
       const target = event.target as HTMLElement | null;
       const actionNode = target?.closest<HTMLElement>("[data-action]");
       if (!actionNode) return;
@@ -225,8 +245,24 @@ namespace TanYue {
           await this.showPopup();
           break;
         case "open-import":
+          this.pendingImports = [];
           appendModal(renderImportModal(this.state));
           break;
+        case "confirm-import":
+          await this.confirmImport();
+          break;
+        case "restore-data":
+          document.querySelector<HTMLInputElement>("#restore-input")?.click();
+          break;
+        case "confirm-restore":
+          await this.confirmRestore();
+          break;
+        case "export-restore-backup": {
+          const raw = window.localStorage.getItem(RESTORE_BACKUP_KEY);
+          if (raw) downloadText(`弹阅恢复前备份-${localDateKey()}.json`, raw, "application/json;charset=utf-8");
+          else toast("浏览器中还没有恢复前备份", "neutral");
+          break;
+        }
         case "close-modal":
           closeModal();
           break;
@@ -331,7 +367,7 @@ namespace TanYue {
             if (nextUnread) setCurrentSegment(this.state, nextUnread.id);
             await this.commit(this.state, false);
             this.closeReader(event, actionNode);
-            toast(`已读完《${completedBook.title}》`, "success");
+            toast(bookCompletionMessage(this.state, completedBook), "success");
             break;
           }
           setCurrentSegment(this.state, next.id);
@@ -416,15 +452,14 @@ namespace TanYue {
           toast("数据导出已开始", "success");
           break;
         case "reset-demo":
-          if (window.confirm("恢复初始内容会清除弹阅中的导入、进度、收藏和笔记。确定继续吗？")) {
-            await this.persistence.reset();
-            this.state = createReleaseSeedState();
-            try {
-              await installBundledSeeds(this.state);
-              if (await this.commit()) toast("已恢复内置书籍", "success");
-            } catch (error) {
-              toast(`恢复失败：${error instanceof Error ? error.message : String(error)}`, "warning");
-            }
+          try {
+            const initial = createReleaseSeedState();
+            if (DesktopBridge.isTauri()) await installBundledSeeds(initial);
+            else initial.contentSeedVersion = BUNDLED_SEED_VERSION;
+            this.pendingRestore = initial;
+            appendModal(renderRestorePreview(this.state, initial));
+          } catch (error) {
+            toast(`准备初始内容失败：${error instanceof Error ? error.message : String(error)}`, "warning");
           }
           break;
         case "focus-search":
@@ -437,14 +472,87 @@ namespace TanYue {
           if (url) await DesktopBridge.openUrl(url);
           break;
         }
+        case "check-update":
+          await this.runCheckUpdate();
+          break;
+        case "download-update":
+          await this.runDownloadUpdate();
+          break;
+        case "install-update":
+          try {
+            await this.persistenceCoordinator.flush();
+            await UpdaterBridge.relaunch();
+          } catch (error) {
+            this.updateUi = reduceUpdateUi(this.updateUi, {
+              type: "download-failed",
+              message: `重启失败：${error instanceof Error ? error.message : String(error)}`
+            });
+            this.render();
+          }
+          break;
         default:
           break;
       }
     }
 
+    private async runCheckUpdate(): Promise<void> {
+      if (["checking", "downloading", "ready"].includes(this.updateUi.phase)) return;
+      if (!UpdaterBridge.isSupported()) {
+        this.updateUi = reduceUpdateUi(this.updateUi, { type: "unsupported" });
+        this.render();
+        return;
+      }
+      this.updateUi = reduceUpdateUi(this.updateUi, { type: "check-start" });
+      this.render();
+      try {
+        const announcement = await UpdaterBridge.check();
+        this.updateUi = announcement
+          ? reduceUpdateUi(this.updateUi, { type: "check-done-found", announcement })
+          : reduceUpdateUi(this.updateUi, { type: "check-done-none" });
+      } catch (error) {
+        this.updateUi = reduceUpdateUi(this.updateUi, {
+          type: "check-failed",
+          message: `检查更新失败：${error instanceof Error ? error.message : String(error)}`
+        });
+      }
+      this.render();
+    }
+
+    private async runDownloadUpdate(): Promise<void> {
+      if (this.updateUi.phase !== "available") return;
+      this.updateUi = reduceUpdateUi(this.updateUi, { type: "download-start" });
+      this.render();
+      try {
+        await UpdaterBridge.download((progress) => {
+          if (this.updateUi.progress?.percent === progress.percent && this.updateUi.progress?.downloaded === progress.downloaded) return;
+          this.updateUi = reduceUpdateUi(this.updateUi, { type: "download-progress", progress });
+          this.render();
+        });
+        this.updateUi = reduceUpdateUi(this.updateUi, { type: "download-done" });
+      } catch (error) {
+        this.updateUi = reduceUpdateUi(this.updateUi, {
+          type: "download-failed",
+          message: `下载更新失败：${error instanceof Error ? error.message : String(error)}`
+        });
+      }
+      this.render();
+    }
+
     private async onChange(event: Event): Promise<void> {
+      if (this.dataOperationBusy) return;
       const element = event.target as HTMLInputElement | HTMLSelectElement | null;
       if (!element) return;
+
+      if (element.id === "restore-input" && element instanceof HTMLInputElement && element.files?.length) {
+        try {
+          this.pendingRestore = parseStateBackup(await element.files[0].text());
+          appendModal(renderRestorePreview(this.state, this.pendingRestore));
+        } catch (error) {
+          toast(error instanceof Error ? error.message : String(error), "warning");
+        }
+        element.value = "";
+        return;
+      }
 
       if (element.id === "file-input" && element instanceof HTMLInputElement && element.files?.length) {
         await this.importFiles(Array.from(element.files));
@@ -478,6 +586,7 @@ namespace TanYue {
     }
 
     private onInput(event: Event): void {
+      if (this.dataOperationBusy) return;
       const element = event.target as HTMLInputElement | null;
       if (!element) return;
       if (element.id === "library-search") this.filterCards("#book-grid", element.value);
@@ -503,6 +612,7 @@ namespace TanYue {
     }
 
     private onFocusOut(event: FocusEvent): void {
+      if (this.dataOperationBusy) return;
       const textarea = event.target as HTMLTextAreaElement | null;
       if (textarea?.id !== "reader-note") return;
       const segment = this.state.segments.find((item) => item.id === textarea.dataset.segmentId);
@@ -513,6 +623,7 @@ namespace TanYue {
     }
 
     private async onKeyDown(event: KeyboardEvent): Promise<void> {
+      if (this.dataOperationBusy) return;
       if (event.key === "Escape") {
         if (document.querySelector("#reading-popup-layer")) this.popup.close();
         else if (document.querySelector(".modal-backdrop")) closeModal();
@@ -551,6 +662,7 @@ namespace TanYue {
         if (root === "schedule") {
           const scheduleRecord = this.state.schedule as unknown as Record<string, string | number | boolean>;
           scheduleRecord[key] = element instanceof HTMLInputElement && element.type === "range" ? Number(element.value) : raw;
+          this.state.schedule = normalizeSchedule(this.state.schedule);
         }
         if (root === "settings") {
           const settingsRecord = this.state.settings as unknown as Record<string, string | number | boolean>;
@@ -592,15 +704,14 @@ namespace TanYue {
     }
 
     private async importFiles(files: File[]): Promise<void> {
+      if (this.dataOperationBusy) return;
       const supported = files.filter((file) => /\.(txt|md|markdown|json)$/i.test(file.name));
       const unsupported = files.filter((file) => !/\.(txt|md|markdown|json)$/i.test(file.name));
       if (unsupported.length) toast("请让 Agent 将原文件转换为 .tanyue.json 后再导入", "warning");
       if (!supported.length) return;
 
-      let imported = 0;
-      let readableBlocks = 0;
-      let generatedSegments = 0;
-      let warningCount = 0;
+      this.pendingImports = [];
+      const errors: string[] = [];
       for (const file of supported) {
         try {
           let result: ImportResult;
@@ -611,7 +722,9 @@ namespace TanYue {
               result = importAgentPackage(raw);
             } else {
             if (Array.isArray((parsed as Partial<AppState>).books) && Array.isArray((parsed as Partial<AppState>).segments)) {
-              toast("当前版本不自动合并完整状态文件，请使用 TXT 或 Markdown 导入内容", "warning");
+              if (files.length !== 1) throw new Error("恢复全部数据时请单独选择一个备份文件");
+              this.pendingRestore = parseStateBackup(raw);
+              appendModal(renderRestorePreview(this.state, this.pendingRestore));
               continue;
             }
             const text = (parsed as { text?: string }).text;
@@ -627,30 +740,83 @@ namespace TanYue {
             toast(`${result.book.title} 已经导入，无需重复添加`, "neutral");
             continue;
           }
-          addImportedContent(this.state, result);
-          readableBlocks += result.coverage.readableBlockCount;
-          generatedSegments += result.coverage.segmentCount;
-          warningCount += result.warnings.length;
-          imported += 1;
+          if (!this.pendingImports.some((item) => item.book.id === result.book.id)) this.pendingImports.push(result);
         } catch (error) {
           console.error(error);
-          toast(`${file.name} 导入失败：${error instanceof Error ? error.message : "未知错误"}`, "warning");
+          errors.push(`${file.name}：${error instanceof Error ? error.message : "未知错误"}`);
         }
       }
-      if (imported) {
-        this.state.selectedView = "library";
-        this.commit();
+      if (this.pendingImports.length || errors.length) appendModal(renderImportPreview(this.pendingImports, errors));
+    }
+
+    private async confirmImport(): Promise<void> {
+      if (this.dataOperationBusy || !this.pendingImports.length) return;
+      if (this.processingPendingImports) { toast("正在完成 Agent 导入，请稍后重试", "neutral"); return; }
+      this.dataOperationBusy = true;
+      const button = document.querySelector<HTMLButtonElement>('[data-action="confirm-import"]');
+      if (button) { button.disabled = true; button.textContent = "正在保存…"; }
+      try {
+        await this.popup.close();
+        await DesktopBridge.hideReadingPopup();
+        await this.persistenceCoordinator.flush();
+        const candidate = await this.persistence.load() || deepClone(this.state);
+        let count = 0;
+        for (const result of this.pendingImports) {
+          if (candidate.books.some((book) => book.id === result.book.id)) continue;
+          addImportedContent(candidate, result);
+          count += 1;
+        }
+        candidate.selectedView = "library";
+        await this.persistenceCoordinator.save(candidate);
+        this.state = candidate;
+        this.pendingImports = [];
+        await DesktopBridge.emitStateChanged();
+        this.render();
         closeModal();
-        const warningText = warningCount ? `，另有 ${warningCount} 条重复内容提醒` : "";
-        toast(
-          `已导入 ${imported} 个来源：覆盖率 100%，${readableBlocks} 个正文块生成 ${generatedSegments} 个片段${warningText}`,
-          warningCount ? "warning" : "success"
-        );
+        toast(count ? `已安全导入 ${count} 个来源，覆盖率 100%` : "内容已在书架中，无需重复导入", "success");
+      } catch (error) {
+        const status = document.querySelector("#import-save-status");
+        if (status) status.textContent = `保存失败，书架未变更，可重试：${error instanceof Error ? error.message : String(error)}`;
+      } finally {
+        this.dataOperationBusy = false;
+        if (button) { button.disabled = false; button.textContent = "确认导入"; }
+      }
+    }
+
+    private async confirmRestore(): Promise<void> {
+      if (this.dataOperationBusy || !this.pendingRestore || !this.persistence.restore) return;
+      if (this.processingPendingImports) { toast("正在完成 Agent 导入，请稍后重试", "neutral"); return; }
+      this.dataOperationBusy = true;
+      const button = document.querySelector<HTMLButtonElement>('[data-action="confirm-restore"]');
+      if (button) { button.disabled = true; button.textContent = "正在备份并恢复…"; }
+      try {
+        await this.popup.close();
+        await DesktopBridge.hideReadingPopup();
+        await this.persistenceCoordinator.flush();
+        const candidate = deepClone(this.pendingRestore);
+        candidate.contentSeedVersion = Math.max(candidate.contentSeedVersion, BUNDLED_SEED_VERSION);
+        candidate.settings.autostart = this.state.settings.autostart;
+        candidate.selectedView = "settings";
+        const backupPath = await this.persistence.restore(candidate);
+        this.state = candidate;
+        this.pendingRestore = null;
+        this.activeReaderSegmentId = null;
+        this.importDuration = candidate.schedule.targetSeconds;
+        await DesktopBridge.emitStateChanged();
+        this.render();
+        await DesktopBridge.setFloatingWidget(candidate.settings.floatingWidget);
+        appendModal(modalShell("restore-complete", "数据已恢复", "恢复前的数据已完整保留。", `<p class="backup-location">${escapeHtml(backupPath)}</p><button class="primary-button" data-action="close-modal">完成</button>`));
+      } catch (error) {
+        const status = document.querySelector("#restore-status");
+        if (status) status.textContent = `恢复失败，原数据保留，可重试：${error instanceof Error ? error.message : String(error)}`;
+      } finally {
+        this.dataOperationBusy = false;
+        if (button) { button.disabled = false; button.textContent = "备份当前数据并恢复"; }
       }
     }
 
     private async processPendingImportPackages(): Promise<void> {
-      if (this.processingPendingImports || !DesktopBridge.isTauri()) return;
+      if (this.processingPendingImports || this.dataOperationBusy || document.querySelector(".modal-backdrop") || !DesktopBridge.isTauri()) return;
       this.processingPendingImports = true;
       try {
         const pending = await DesktopBridge.listPendingImportPackages();
@@ -841,8 +1007,9 @@ namespace TanYue {
     private async setupDesktopListeners(): Promise<void> {
       this.unlistenState = await DesktopBridge.listenStateChanged(() => {
         void (async () => {
+          if (this.dataOperationBusy) return;
           const state = await this.persistence.load();
-          if (!state) return;
+          if (!state || this.dataOperationBusy) return;
           this.state = state;
           this.applyAppearance();
           if (isFloatingMode()) this.floating.refresh();
@@ -881,15 +1048,15 @@ namespace TanYue {
     }
 
     private startScheduler(): void {
+      let previousTick = Date.now();
       const tick = () => {
+        const lastTick = previousTick;
+        previousTick = Date.now();
+        if (this.dataOperationBusy || document.querySelector(".modal-backdrop, .reader-backdrop")) return;
         if (!this.state.schedule.enabled || document.visibilityState === "hidden" && !DesktopBridge.isTauri()) return;
         const now = new Date();
-        const slots = generateDailySlots(now, this.state.schedule);
-        const due = slots.find((slot) => Math.abs(slot.at.getTime() - now.getTime()) < 30_000);
-        if (!due || due.at.toISOString() === this.state.schedule.lastTriggeredSlot) return;
-        const paused = this.state.schedule.pausedUntil && new Date(this.state.schedule.pausedUntil) > now;
-        const snoozed = this.state.schedule.snoozeUntil && new Date(this.state.schedule.snoozeUntil) > now;
-        if (paused || snoozed || isQuietTime(now, this.state.schedule)) return;
+        const due = dueReminderSlot(this.state.schedule, now, lastTick);
+        if (!due) return;
         this.state.schedule.lastTriggeredSlot = due.at.toISOString();
         void (async () => {
           if (await this.commit(this.state, false)) await this.showPopup(true);

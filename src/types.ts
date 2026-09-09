@@ -108,6 +108,7 @@ namespace TanYue {
     hoverPausesTimer: boolean;
     reduceMotion: boolean;
     showExplanation: boolean;
+    adSkin: boolean;
     nativeNotifications: boolean;
     fontScale: number;
     readingFont: "serif" | "sans";
@@ -243,6 +244,35 @@ namespace TanYue {
       openUrl: (url: string) => Promise<void>;
       openPath?: (path: string) => Promise<void>;
     };
+    app?: {
+      getVersion: () => Promise<string>;
+    };
+    process?: {
+      relaunch: () => Promise<void>;
+      exit?: (code?: number) => Promise<void>;
+    };
+    updater?: {
+      check: () => Promise<UpdaterUpdate | null>;
+    };
+  }
+
+  export interface UpdaterProgressEvent {
+    event: "Started" | "Progress" | "Finished";
+    data: {
+      contentLength?: number | null;
+      chunkLength?: number;
+    };
+  }
+
+  export interface UpdaterUpdate {
+    version: string;
+    currentVersion: string;
+    date: string | null;
+    notes?: string | null;
+    body?: string | null;
+    download: (onEvent: (event: UpdaterProgressEvent) => void) => Promise<void>;
+    install: () => Promise<void>;
+    close: () => Promise<void>;
   }
 
   export interface MigrationOutcome {

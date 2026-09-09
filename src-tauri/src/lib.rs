@@ -17,7 +17,7 @@ const POPUP_MARGIN_Y: f64 = 72.0;
 const FLOATING_WIDTH: f64 = 52.0;
 const FLOATING_HEIGHT: f64 = 52.0;
 const FLOATING_MARGIN: f64 = 18.0;
-const WINDOW_GAP: f64 = 4.0;
+const WINDOW_GAP: f64 = 0.0;
 const WINDOW_SAFE_MARGIN: f64 = 12.0;
 const POPUP_HEADER_CENTER: f64 = 25.0;
 
@@ -117,11 +117,11 @@ fn apply_floating_window_region(window: &tauri::WebviewWindow) -> Result<(), Str
         (outer_size.width as f64, outer_size.height as f64),
         scale,
     );
-    let left = content.0.round() as i32;
-    let top = content.1.round() as i32;
-    let right = (content.0 + content.2).round() as i32;
-    let bottom = (content.1 + content.3).round() as i32;
-    let corner = (18.0 * scale).round().max(1.0) as i32;
+    let left = (content.0 + 2.0 * scale).round() as i32;
+    let top = (content.1 + 2.0 * scale).round() as i32;
+    let right = (content.0 + content.2 - 2.0 * scale).round() as i32;
+    let bottom = (content.1 + content.3 - 2.0 * scale).round() as i32;
+    let corner = (30.0 * scale).round().max(1.0) as i32;
     let native_window = window.hwnd().map_err(|error| error.to_string())?;
 
     // Windows enforces a minimum top-level HWND width even for an undecorated 52px
@@ -350,8 +350,7 @@ fn create_floating_widget(app: &tauri::AppHandle) -> Result<(), String> {
     .resizable(false)
     .focused(false)
     .focusable(true)
-    .visible(false)
-    .prevent_overflow();
+    .visible(false);
 
     let mut builder = builder;
     let mut initial_content_position = None;
@@ -614,12 +613,43 @@ async fn move_reading_popup(
 }
 
 #[tauri::command]
-async fn start_floating_widget_drag(app: tauri::AppHandle) -> Result<bool, String> {
+async fn move_floating_widget(
+    app: tauri::AppHandle,
+    x: f64,
+    y: f64,
+    settle: bool,
+) -> Result<bool, String> {
+    if !x.is_finite() || !y.is_finite() {
+        return Err("悬浮图标位置无效".into());
+    }
     let Some(window) = app.get_webview_window("reading-floating") else {
         return Ok(false);
     };
-    window.start_dragging().map_err(|error| error.to_string())?;
+    window
+        .set_position(LogicalPosition::new(x, y))
+        .map_err(|error| error.to_string())?;
+    if settle {
+        if let Some(anchor) = capture_floating_anchor(&window) {
+            let (x, y) = docked_floating_position(anchor);
+            set_floating_content_position(&window, x, y)?;
+        }
+    }
     Ok(true)
+}
+
+fn docked_floating_position(anchor: PopupAnchor) -> (f64, f64) {
+    let (x, y, width, height) = anchor.rect;
+    let (left, top, screen_width, screen_height) = anchor.monitor;
+    let right = left + screen_width;
+    let threshold = 24.0 * anchor.scale;
+    let x = if x <= left + threshold {
+        left - width / 2.0
+    } else if x + width >= right - threshold {
+        right - width / 2.0
+    } else {
+        x
+    };
+    (x, y.clamp(top, (top + screen_height - height).max(top)))
 }
 
 #[tauri::command]
@@ -650,6 +680,28 @@ mod window_geometry_tests {
     };
 
     #[test]
+    fn floating_docks_halfway_at_both_edges_without_changing_middle_positions() {
+        for scale in [1.0, 1.5, 2.0] {
+            let mut anchor = PopupAnchor {
+                rect: (-1920.0 + 10.0 * scale, 300.0, 52.0 * scale, 52.0 * scale),
+                monitor: (-1920.0, 0.0, 1920.0, 1080.0),
+                scale,
+            };
+            assert_eq!(
+                super::docked_floating_position(anchor),
+                (-1920.0 - 26.0 * scale, 300.0)
+            );
+            anchor.rect.0 = -60.0 * scale;
+            assert_eq!(
+                super::docked_floating_position(anchor),
+                (-26.0 * scale, 300.0)
+            );
+            anchor.rect.0 = -900.0;
+            assert_eq!(super::docked_floating_position(anchor), (-900.0, 300.0));
+        }
+    }
+
+    #[test]
     fn windows_minimum_width_is_excluded_from_the_floating_content_rect() {
         let rect = floating_content_rect((300.0, 400.0), (262.0, 104.0), 2.0);
         assert_eq!(rect, (379.0, 400.0, 104.0, 104.0));
@@ -667,7 +719,7 @@ mod window_geometry_tests {
             (0.0, 0.0, 1920.0, 1080.0),
             1.0,
         );
-        assert_eq!((x, y), (1366.0, 481.0));
+        assert_eq!((x, y), (1370.0, 481.0));
     }
 
     #[test]
@@ -678,7 +730,7 @@ mod window_geometry_tests {
             (0.0, 0.0, 1920.0, 1080.0),
             1.0,
         );
-        assert_eq!(x, 74.0);
+        assert_eq!(x, 70.0);
     }
 
     #[test]
@@ -689,8 +741,24 @@ mod window_geometry_tests {
             scale: 1.5,
         };
         let (position, size) = popup_geometry_for_anchor(anchor, 480.0, 425.0);
-        assert_eq!((position.x, position.y), (2079, 722));
+        assert_eq!((position.x, position.y), (2085, 722));
         assert_eq!((size.width, size.height), (720, 638));
+    }
+
+    #[test]
+    fn popup_stays_inside_negative_coordinate_monitor_at_common_scales() {
+        for scale in [1.0, 1.5, 2.0] {
+            let monitor = (-2560.0, -300.0, 2560.0, 1440.0);
+            let anchor = PopupAnchor {
+                rect: (-100.0, 100.0, 52.0 * scale, 52.0 * scale),
+                monitor,
+                scale,
+            };
+            let (position, size) = popup_geometry_for_anchor(anchor, 480.0, 425.0);
+            assert!(position.x >= -2560 && position.y >= -300);
+            assert!(position.x + size.width as i32 <= 0);
+            assert!(position.y + size.height as i32 <= 1140);
+        }
     }
 
     #[test]
@@ -700,7 +768,7 @@ mod window_geometry_tests {
             monitor: (0.0, 0.0, 1920.0, 1080.0),
             scale: 1.0,
         };
-        let position = floating_position_for_popup(anchor, (1366.0, 481.0, 480.0, 425.0));
+        let position = floating_position_for_popup(anchor, (1370.0, 481.0, 480.0, 425.0));
         assert_eq!(position, (1850.0, 480.0));
     }
 
@@ -711,7 +779,7 @@ mod window_geometry_tests {
             monitor: (0.0, 0.0, 1920.0, 1080.0),
             scale: 1.0,
         };
-        let position = floating_position_for_popup(anchor, (74.0, 481.0, 480.0, 425.0));
+        let position = floating_position_for_popup(anchor, (70.0, 481.0, 480.0, 425.0));
         assert_eq!(position, (18.0, 480.0));
     }
 
@@ -748,6 +816,8 @@ pub fn run() {
         .manage(WindowCoordinator::default())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
             None,
@@ -757,12 +827,13 @@ pub fn run() {
             hide_reading_popup,
             fit_reading_popup,
             move_reading_popup,
-            start_floating_widget_drag,
+            move_floating_widget,
             show_main_window,
             show_floating_widget,
             hide_floating_widget,
             state_repository::load_app_state,
             state_repository::save_app_state,
+            state_repository::restore_app_state,
             state_repository::migrate_legacy_state,
             state_repository::reset_app_state,
             state_repository::storage_diagnostics,

@@ -1,7 +1,7 @@
 namespace TanYue {
   export const STORAGE_KEY = "tanyue.state.v1";
   export const LEGACY_STORAGE_KEYS = ["shuchuang.state.v1"] as const;
-  export const APP_VERSION = "0.2.3";
+  export const APP_VERSION = "0.2.5";
   export const BRAND = {
     name: "弹阅",
     codeName: "TanYue",
@@ -25,6 +25,43 @@ namespace TanYue {
     if (!Number.isFinite(numeric)) return 1;
     const clamped = clamp(numeric, READING_FONT_SCALE_MIN, READING_FONT_SCALE_MAX);
     return Number((Math.round(clamped / READING_FONT_SCALE_STEP) * READING_FONT_SCALE_STEP).toFixed(2));
+  }
+
+  export function toFiniteNumber(value: unknown, fallback: number): number {
+    const numeric = typeof value === "number" ? value : Number(value);
+    return Number.isFinite(numeric) ? numeric : fallback;
+  }
+
+  export function normalizeSchedule(schedule: ReadingSchedule): ReadingSchedule {
+    const dailyCount = toFiniteNumber(schedule.dailyCount, 5);
+    const displaySeconds = toFiniteNumber(schedule.displaySeconds, 60);
+    const rawTarget = toFiniteNumber(schedule.targetSeconds, 60);
+    const targetSeconds: 30 | 60 | 90 =
+      rawTarget === 30 || rawTarget === 60 || rawTarget === 90 ? rawTarget : 60;
+    return { ...schedule, dailyCount, displaySeconds, targetSeconds };
+  }
+
+  export function normalizeSettings(raw: Partial<AppSettings>): AppSettings {
+    // 只保留当前版本真正使用的设置字段，并规范化类型。
+    // 旧版本遗留的假设置（closeToTray / aiEnabled / pauseFullscreen 等）会被丢弃，
+    // 避免脏字段在迁移后继续残留、也避免 UI 读出已移除的开关。
+    const theme: ThemeMode = raw.theme === "light" || raw.theme === "dark" ? raw.theme : "system";
+    const readingFont: "serif" | "sans" = raw.readingFont === "sans" ? "sans" : "serif";
+    const popupSizeMode: PopupSizeMode =
+      raw.popupSizeMode === "compact" || raw.popupSizeMode === "small" ? raw.popupSizeMode : "adaptive";
+    return {
+      theme,
+      autostart: raw.autostart === true,
+      floatingWidget: raw.floatingWidget !== false,
+      hoverPausesTimer: raw.hoverPausesTimer !== false,
+      reduceMotion: raw.reduceMotion === true,
+      showExplanation: raw.showExplanation !== false,
+      adSkin: raw.adSkin === true,
+      nativeNotifications: raw.nativeNotifications === true,
+      fontScale: normalizeReadingFontScale(raw.fontScale),
+      readingFont,
+      popupSizeMode
+    };
   }
 
   export function readingFontScaleProgress(value: unknown): number {

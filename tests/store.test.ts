@@ -35,7 +35,8 @@ namespace TanYueTests {
     equal(next?.id, segments[1].id, "下次应显示下一段");
     equal(state.currentSegmentId, segments[1].id, "全局阅读游标应同步推进");
     equal(TanYue.resumeSegmentForBook(state, state.activeBookId)?.id, segments[1].id, "重新进入书籍也应接着下一段");
-    equal(TanYue.progressForBook(state, state.activeBookId).read, 1, "收起片段应计入已读进度");
+    equal(TanYue.progressForBook(state, state.activeBookId).read, 0, "收起片段不能计入确认读完");
+    equal(TanYue.progressForBook(state, state.activeBookId).browsed, 1, "收起片段应计入浏览进度");
   });
 
   test("旧片段回填追溯信息时保留阅读状态、收藏和笔记", () => {

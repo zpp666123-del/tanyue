@@ -587,6 +587,7 @@ namespace TanYue {
         hoverPausesTimer: true,
         reduceMotion: false,
         showExplanation: true,
+        adSkin: false,
         nativeNotifications: false,
         fontScale: 1,
         readingFont: "serif",

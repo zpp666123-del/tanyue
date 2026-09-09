@@ -760,6 +760,39 @@ pub async fn reset_app_state(app: AppHandle) -> RepositoryResult<()> {
     .map_err(|error| format!("state reset task failed: {error}"))?
 }
 
+fn restore_state(
+    connection: &mut Connection,
+    app_data_dir: &Path,
+    state_json: &str,
+) -> RepositoryResult<String> {
+    let incoming = parse_state(state_json)?;
+    let transaction = connection
+        .transaction_with_behavior(TransactionBehavior::Immediate)
+        .map_err(|error| format!("failed to start restore: {error}"))?;
+    let original =
+        load_state(&transaction)?.ok_or_else(|| "no current state to back up".to_string())?;
+    let (backup, _, _) = write_migration_backup(app_data_dir, &original)?;
+    save_state_transaction(&transaction, &incoming)?;
+    transaction
+        .commit()
+        .map_err(|error| format!("failed to commit restore: {error}"))?;
+    Ok(backup.to_string_lossy().into_owned())
+}
+
+#[tauri::command]
+pub async fn restore_app_state(app: AppHandle, state_json: String) -> RepositoryResult<String> {
+    let path = database_path(&app)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut connection = open_database(&path)?;
+        let directory = path
+            .parent()
+            .ok_or_else(|| "database has no parent".to_string())?;
+        restore_state(&mut connection, directory, &state_json)
+    })
+    .await
+    .map_err(|error| format!("restore task failed: {error}"))?
+}
+
 #[tauri::command]
 pub async fn migrate_legacy_state(
     app: AppHandle,
@@ -870,6 +903,30 @@ mod tests {
         let mut connection = Connection::open_in_memory().expect("open in-memory database");
         apply_schema(&mut connection).expect("apply schema");
         connection
+    }
+
+    #[test]
+    fn restore_backs_up_current_state_and_rolls_back_on_failure() {
+        let mut connection = memory_database();
+        let original = sample_state_json();
+        save_state(&mut connection, &original).expect("save original");
+        let directory =
+            std::env::temp_dir().join(format!("tanyue-restore-test-{}", unix_millis().unwrap()));
+        let mut incoming: Value = serde_json::from_str(&original).unwrap();
+        incoming["segments"][0]["note"] = Value::String("restored note".into());
+        let backup =
+            restore_state(&mut connection, &directory, &incoming.to_string()).expect("restore");
+        let previous: Value = serde_json::from_str(&fs::read_to_string(backup).unwrap()).unwrap();
+        assert_eq!(previous["segments"][0]["note"], "note");
+        let restored = load_state(&connection).unwrap().unwrap();
+        assert!(restored.contains("restored note"));
+        let blocked_directory = directory.join("not-a-directory");
+        fs::write(&blocked_directory, b"blocked").unwrap();
+        assert!(restore_state(&mut connection, &blocked_directory, &original).is_err());
+        assert_eq!(load_state(&connection).unwrap().unwrap(), restored);
+        assert!(restore_state(&mut connection, &directory, "{}").is_err());
+        assert_eq!(load_state(&connection).unwrap().unwrap(), restored);
+        fs::remove_dir_all(directory).unwrap();
     }
 
     #[test]

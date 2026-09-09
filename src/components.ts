@@ -120,7 +120,22 @@ namespace TanYue {
     template.innerHTML = html.trim();
     const node = template.content.firstElementChild as HTMLElement;
     document.body.append(node);
-    requestAnimationFrame(() => node.classList.add("visible"));
+    const previousFocus = document.activeElement as HTMLElement | null;
+    requestAnimationFrame(() => {
+      node.classList.add("visible");
+      node.querySelector<HTMLElement>("button, input, summary")?.focus();
+    });
+    node.addEventListener("keydown", (event) => {
+      if (event.key !== "Tab") return;
+      const controls = Array.from(node.querySelectorAll<HTMLElement>('button:not(:disabled), input:not([hidden]), summary, [tabindex="0"]')).filter((item) => item.getClientRects().length);
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    });
+    node.addEventListener("transitionend", () => {
+      if (!node.classList.contains("visible") && previousFocus?.isConnected) previousFocus.focus();
+    });
     return node;
   }
 

@@ -1,6 +1,6 @@
 {
   "name": "tanyue-desktop-reader",
-  "version": "0.2.3",
+  "version": "0.2.6",
   "private": true,
   "description": "弹阅：本地优先、安静不打扰的桌面微阅读工具",
   "repository": {
@@ -23,7 +23,8 @@
     "tauri": "node tools/run-tauri.mjs",
     "tauri:dev": "node tools/run-tauri.mjs dev",
     "tauri:build": "node tools/run-tauri.mjs build",
-    "release:windows": "node tools/build-windows-release.mjs"
+    "release:windows": "node tools/build-windows-release.mjs",
+    "publish:update": "node tools/publish-updates.mjs"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",

@@ -22,6 +22,9 @@ Thumbs.db
 .env.*
 !.env.example
 
+# 更新签名密钥（绝不可入库，见 docs/11-自动更新与分发方案.md）
+keys/
+
 # 本地交付与代理接力记录
 DELIVERY_REPORT.md
 FILE_MANIFEST.sha256

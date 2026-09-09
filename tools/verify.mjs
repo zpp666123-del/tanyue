@@ -113,7 +113,7 @@ for (const token of ["page-in", "translateY(-1px)", "button:active { transform: 
 const rust = readText("src-tauri", "src", "lib.rs");
 for (const token of [
   ".visible(false)", "if reveal {", "const FLOATING_WIDTH: f64 = 52.0;",
-  "const WINDOW_GAP: f64 = 4.0;", "struct WindowCoordinator", "popup_anchor.take()",
+  "const WINDOW_GAP: f64 = 0.0;", "struct WindowCoordinator", "popup_anchor.take()",
   "WindowEvent::Moved", "sync_popup_to_floating", "floating_position_for_popup"
 ]) {
   if (!rust.includes(token)) {
@@ -123,7 +123,7 @@ for (const token of [
 }
 for (const command of [
   "show_reading_popup", "show_floating_widget", "hide_floating_widget", "load_app_state",
-  "fit_reading_popup", "move_reading_popup", "start_floating_widget_drag", "save_app_state", "migrate_legacy_state",
+  "fit_reading_popup", "move_reading_popup", "move_floating_widget", "save_app_state", "migrate_legacy_state",
   "reset_app_state", "storage_diagnostics", "list_pending_import_packages", "acknowledge_import_package"
 ]) {
   if (!rust.includes(command)) {

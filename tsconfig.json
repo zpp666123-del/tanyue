@@ -29,6 +29,7 @@
     "src/persistence.ts",
     "src/popup-layout.ts",
     "src/desktop.ts",
+    "src/updater-ui.ts",
     "src/icons.ts",
     "src/components.ts",
     "src/floating.ts",

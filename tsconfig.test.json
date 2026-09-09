@@ -25,6 +25,7 @@
     "src/persistence.ts",
     "src/popup-layout.ts",
     "src/desktop.ts",
+    "src/updater-ui.ts",
     "tests/source-adapter.test.ts",
     "tests/import-package.test.ts",
     "tests/segmenter.test.ts",
@@ -34,6 +35,7 @@
     "tests/popup-layout.test.ts",
     "tests/demo-data.test.ts",
     "tests/core.test.ts",
+    "tests/updater-ui.test.ts",
     "tests/run.ts"
   ]
 }
