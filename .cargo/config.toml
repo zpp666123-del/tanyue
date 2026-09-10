@@ -1,0 +1,10 @@
+# 项目级 crates.io 镜像：本机直连 static.crates.io 被限速（~7KB/s），
+# 使用 rsproxy.cn 稀疏索引（实测 ~120KB/s）。不影响其他项目；CI 同样可用。
+[source.crates-io]
+replace-with = "rsproxy-sparse"
+
+[source.rsproxy-sparse]
+registry = "sparse+https://rsproxy.cn/index/"
+
+[net]
+retry = 3

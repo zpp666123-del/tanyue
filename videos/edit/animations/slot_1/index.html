@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: "Tanyue Sans";
+        src: url("assets/fonts/tanyue-sans.ttc") format("truetype");
+        font-style: normal;
+        font-weight: 100 900;
+      }
+      @font-face {
+        font-family: "Tanyue Serif";
+        src: url("assets/fonts/tanyue-serif.ttc") format("truetype");
+        font-style: normal;
+        font-weight: 400 900;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #f5f4f1;
+        color: #1d1d1f;
+        font-family: "Tanyue Sans", sans-serif;
+      }
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #f5f4f1;
+      }
+      .scene {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background-color: #f5f4f1;
+        transform-origin: 50% 50%;
+      }
+      #scene2, #scene3, #scene4, #scene5, #scene6, #scene7, #scene8 { opacity: 0; }
+      .scene-content {
+        width: 100%;
+        height: 100%;
+        padding: 84px 110px 150px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 26px;
+        position: relative;
+        z-index: 3;
+      }
+      .glow {
+        position: absolute;
+        width: 760px;
+        height: 760px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(201,95,61,.17) 0%, rgba(201,95,61,0) 68%);
+        pointer-events: none;
+        z-index: 0;
+      }
+      .glow.sage {
+        background: radial-gradient(circle, rgba(83,120,99,.13) 0%, rgba(83,120,99,0) 70%);
+      }
+      .eyebrow {
+        color: #c95f3d;
+        font-size: 24px;
+        font-weight: 800;
+        letter-spacing: .12em;
+      }
+      h1, h2 {
+        font-family: "Tanyue Serif", serif;
+        font-weight: 700;
+        letter-spacing: -.045em;
+      }
+      h1 { font-size: 112px; line-height: 1.08; }
+      h2 { font-size: 76px; line-height: 1.12; }
+      .lead {
+        max-width: 760px;
+        color: #686868;
+        font-size: 30px;
+        line-height: 1.65;
+        font-weight: 350;
+      }
+      .frame {
+        overflow: hidden;
+        border: 1px solid rgba(29,29,31,.09);
+        background: #fff;
+        box-shadow: 0 28px 82px rgba(42,35,29,.16), 0 3px 12px rgba(42,35,29,.07);
+      }
+      .frame img { width: 100%; height: 100%; display: block; object-fit: cover; }
+
+      #scene1 .glow { right: -170px; top: -230px; }
+      .s1-copy { width: 930px; position: relative; z-index: 4; }
+      .s1-copy h1 { max-width: 900px; margin: 18px 0 26px; }
+      .s1-main {
+        position: absolute;
+        right: -85px;
+        top: 88px;
+        width: 900px;
+        height: 715px;
+        border-radius: 34px;
+        opacity: .24;
+        transform: rotate(-3deg);
+        filter: saturate(.72);
+      }
+      .time-row { display: flex; gap: 15px; margin-top: 38px; }
+      .time-chip {
+        min-width: 180px;
+        padding: 17px 22px;
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        border-radius: 18px;
+        background: rgba(255,255,255,.82);
+        border: 1px solid rgba(29,29,31,.08);
+        color: #686868;
+        font-size: 20px;
+        box-shadow: 0 10px 28px rgba(42,35,29,.06);
+      }
+      .time-chip i { width: 10px; height: 10px; border-radius: 50%; background: #c95f3d; }
+
+      #scene2 .glow { left: -240px; bottom: -290px; }
+      .split { flex-direction: row; align-items: center; justify-content: space-between; gap: 78px; }
+      .s2-copy { width: 600px; display: flex; flex-direction: column; gap: 26px; }
+      .source-row { display: flex; flex-wrap: wrap; gap: 12px; }
+      .source-chip {
+        padding: 13px 18px;
+        border-radius: 13px;
+        background: #fff;
+        border: 1px solid rgba(29,29,31,.08);
+        font-size: 21px;
+        color: #686868;
+      }
+      .seconds-card {
+        width: 430px;
+        padding: 25px 30px;
+        border-radius: 22px;
+        background: #fae9e2;
+        color: #a9472d;
+        font-size: 22px;
+      }
+      .seconds-card strong { display: block; font-size: 62px; line-height: 1; font-variant-numeric: tabular-nums; }
+      .s2-main { width: 1010px; height: 758px; border-radius: 32px; }
+
+      #scene3 .glow { right: -180px; bottom: -260px; }
+      .s3-popup { width: 760px; height: 760px; border-radius: 38px; }
+      .s3-copy { width: 750px; display: flex; flex-direction: column; gap: 24px; }
+      .s3-floating {
+        width: 132px;
+        height: 132px;
+        padding: 10px;
+        border-radius: 32px;
+        background: rgba(255,255,255,.94);
+        box-shadow: 0 18px 48px rgba(42,35,29,.16);
+      }
+      .s3-floating img { width: 100%; height: 100%; object-fit: contain; }
+      .quiet-badge {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: max-content;
+        padding: 15px 22px;
+        border-radius: 16px;
+        background: #e7f0e9;
+        color: #537863;
+        font-size: 22px;
+        font-weight: 700;
+      }
+      .quiet-badge i { width: 12px; height: 12px; border-radius: 50%; background: #537863; }
+
+      #scene4 .glow { left: -220px; top: -280px; }
+      .s4-copy { width: 660px; display: flex; flex-direction: column; gap: 25px; }
+      .action-list { display: flex; flex-direction: column; gap: 14px; width: 580px; }
+      .action-item {
+        padding: 20px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-radius: 17px;
+        background: #fff;
+        border: 1px solid rgba(29,29,31,.08);
+        color: #1d1d1f;
+        font-size: 23px;
+      }
+      .action-item span { color: #686868; font-size: 18px; }
+      .action-item.primary { background: #a9472d; color: #fff; border-color: #a9472d; }
+      .action-item.primary span { padding: 6px 10px; border-radius: 9px; background: #fdfbf7; color: #1d1d1f; }
+      .s4-popup { width: 780px; height: 780px; border-radius: 38px; }
+      .s4-popup img { object-position: 50% 100%; }
+
+      #scene5 .glow { right: -230px; top: -290px; }
+      .s5-main { width: 1030px; height: 772px; border-radius: 32px; }
+      .s5-copy { width: 580px; display: flex; flex-direction: column; gap: 25px; }
+      .book-stack { display: flex; gap: 15px; align-items: flex-end; }
+      .book-mini {
+        width: 118px;
+        height: 168px;
+        padding: 20px 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 13px 18px 18px 13px;
+        color: #fff;
+        font-family: "Tanyue Serif", serif;
+        font-size: 25px;
+        text-align: center;
+        box-shadow: 0 15px 30px rgba(42,35,29,.14);
+      }
+      .book-mini:nth-child(1) { background: #bc6746; }
+      .book-mini:nth-child(2) { background: #537863; height: 186px; }
+      .book-mini:nth-child(3) { background: #596f99; height: 156px; }
+      .progress-note {
+        padding: 20px 23px;
+        border-radius: 18px;
+        background: #fff;
+        border: 1px solid rgba(29,29,31,.08);
+        font-size: 21px;
+        color: #686868;
+      }
+      .progress-note strong { display: block; margin-bottom: 6px; color: #c95f3d; font-size: 27px; }
+
+      #scene6 .glow { left: -250px; bottom: -300px; }
+      .s6-reader { width: 1080px; height: 760px; border-radius: 31px; }
+      .s6-copy { width: 540px; display: flex; flex-direction: column; gap: 24px; }
+      .feature-tags { display: flex; flex-wrap: wrap; gap: 12px; }
+      .feature-tag {
+        padding: 14px 18px;
+        border-radius: 14px;
+        background: #fff;
+        border: 1px solid rgba(29,29,31,.08);
+        font-size: 21px;
+        color: #686868;
+      }
+      .reader-note { color: #537863; font-size: 22px; font-weight: 700; }
+
+      #scene7 .glow { right: -260px; bottom: -300px; }
+      .s7-copy { width: 760px; display: flex; flex-direction: column; gap: 22px; }
+      .pipeline {
+        width: 900px;
+        display: grid;
+        grid-template-columns: 210px 80px 210px 80px 240px;
+        align-items: center;
+        gap: 12px;
+      }
+      .pipeline-group { display: flex; flex-direction: column; gap: 11px; }
+      .pipeline-node {
+        min-height: 72px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 14px 18px;
+        border-radius: 17px;
+        background: #fff;
+        border: 1px solid rgba(29,29,31,.09);
+        color: #686868;
+        font-size: 22px;
+        font-weight: 700;
+        text-align: center;
+      }
+      .pipeline-arrow { color: #c95f3d; font-size: 48px; text-align: center; }
+      .pipeline-node.verify { min-height: 168px; background: #e7f0e9; color: #537863; white-space: pre-line; }
+      .pipeline-node.local { min-height: 168px; background: #fae9e2; color: #a9472d; white-space: pre-line; }
+      .s7-mosaic { position: absolute; right: 92px; top: 125px; width: 720px; height: 610px; }
+      .mosaic-main { position: absolute; inset: 0 90px 85px 0; border-radius: 27px; }
+      .mosaic-popup { position: absolute; right: 0; bottom: 0; width: 370px; height: 470px; border-radius: 24px; }
+
+      #scene8 .glow { left: 50%; top: -260px; transform: translateX(-50%); width: 980px; height: 980px; }
+      .closing { align-items: center; text-align: center; padding-bottom: 170px; }
+      .closing-logo { width: 104px; height: 104px; border-radius: 28px; box-shadow: 0 22px 48px rgba(183,72,42,.22); }
+      .closing h2 { font-size: 90px; }
+      .closing .lead { max-width: 1000px; }
+      .closing-mosaic {
+        width: 1280px;
+        height: 300px;
+        display: flex;
+        justify-content: center;
+        align-items: flex-end;
+        gap: 22px;
+        margin-top: 8px;
+      }
+      .closing-shot { width: 380px; height: 240px; border-radius: 22px; }
+      .closing-shot:nth-child(2) { width: 430px; height: 280px; }
+      .closing-shot:nth-child(3) { width: 380px; height: 240px; }
+
+      #captions {
+        position: absolute;
+        left: 0;
+        bottom: 42px;
+        width: 100%;
+        height: 92px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 50;
+        pointer-events: none;
+      }
+      .caption-group {
+        position: absolute;
+        width: auto;
+        max-width: 1540px;
+        min-height: 68px;
+        padding: 14px 30px 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 20px;
+        background: rgba(29,29,31,.92);
+        color: #fdfbf7;
+        box-shadow: 0 16px 38px rgba(29,29,31,.18);
+        font-size: 36px;
+        font-weight: 700;
+        line-height: 1.2;
+        letter-spacing: .01em;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+      }
+      .caption-group strong { color: #f3a184; font-weight: 900; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="38.2" data-width="1920" data-height="1080">
+      <section id="scene1" class="scene">
+        <div id="s1-glow" class="glow" data-layout-allow-overflow></div>
+        <div class="scene-content">
+          <div class="s1-copy">
+            <div id="s1-kicker" class="eyebrow">忙碌工作日 · 阅读总被推迟</div>
+            <h1 id="s1-title">想读书，却没有整块时间？</h1>
+            <p id="s1-note" class="lead">会议、消息、待办填满一天，真正属于阅读的，往往只是几个短暂间隙。</p>
+            <div class="time-row">
+              <div class="time-chip s1-time"><i></i><span>09:58 · 会前 2 分钟</span></div>
+              <div class="time-chip s1-time"><i></i><span>12:40 · 午间片刻</span></div>
+              <div class="time-chip s1-time"><i></i><span>15:20 · 等待回复</span></div>
+            </div>
+          </div>
+          <div id="s1-main" class="frame s1-main"><img src="assets/tanyue-main-s1.png" alt="弹阅主界面" /></div>
+        </div>
+      </section>
+
+      <section id="scene2" class="scene">
+        <div id="s2-glow" class="glow sage" data-layout-allow-overflow></div>
+        <div class="scene-content split">
+          <div class="s2-copy">
+            <div id="s2-kicker" class="eyebrow">弹阅 · 桌面微阅读</div>
+            <h2 id="s2-title">把长内容，变成可完成的小片段</h2>
+            <div id="s2-sources" class="source-row"><span class="source-chip">书籍</span><span class="source-chip">文档</span><span class="source-chip">网页</span></div>
+            <div id="s2-seconds" class="seconds-card"><strong>20～90 秒</strong>每段保持完整语义，利用工作间隙读完</div>
+          </div>
+          <div id="s2-main" class="frame s2-main"><img src="assets/tanyue-main-s2.png" alt="弹阅今日页面" /></div>
+        </div>
+      </section>
+
+      <section id="scene3" class="scene">
+        <div id="s3-glow" class="glow" data-layout-allow-overflow></div>
+        <div class="scene-content split">
+          <div id="s3-popup" class="frame s3-popup"><img src="assets/tanyue-popup-s3.png" alt="弹阅微读弹窗" /></div>
+          <div class="s3-copy">
+            <div id="s3-kicker" class="eyebrow">轻量出现</div>
+            <h2 id="s3-title">一张阅读卡片，安静抵达桌面</h2>
+            <p id="s3-note" class="lead">不强制全屏，不打断正在输入的工作，正文始终是视觉主角。</p>
+            <div id="s3-badge" class="quiet-badge"><i></i>不抢焦点 · 可随时关闭</div>
+            <div id="s3-floating" class="s3-floating"><img src="assets/tanyue-floating.png" alt="弹阅悬浮入口" /></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene4" class="scene">
+        <div id="s4-glow" class="glow" data-layout-allow-overflow></div>
+        <div class="scene-content split">
+          <div class="s4-copy">
+            <div id="s4-kicker" class="eyebrow">节奏由你决定</div>
+            <h2 id="s4-title">阅读提醒，不等于强迫打卡</h2>
+            <div class="action-list">
+              <div id="s4-action1" class="action-item primary">读完并继续 <span>进入下一段 →</span></div>
+              <div id="s4-action2" class="action-item">稍后提醒 <span>保留当前位置</span></div>
+              <div id="s4-action3" class="action-item">今天暂停 <span>今天不再打扰</span></div>
+            </div>
+            <p id="s4-note" class="lead">随时拒绝、随时恢复，没有惩罚式连续打卡。</p>
+          </div>
+          <div id="s4-popup" class="frame s4-popup"><img src="assets/tanyue-popup-s4.png" alt="微读弹窗操作区" /></div>
+        </div>
+      </section>
+
+      <section id="scene5" class="scene">
+        <div id="s5-glow" class="glow" data-layout-allow-overflow></div>
+        <div class="scene-content split">
+          <div id="s5-main" class="frame s5-main"><img src="assets/tanyue-main-s5.png" alt="弹阅书架与阅读进度" /></div>
+          <div class="s5-copy">
+            <div id="s5-kicker" class="eyebrow">准确接续</div>
+            <h2 id="s5-title">每本书，都记得自己的位置</h2>
+            <div id="s5-books" class="book-stack"><div class="book-mini">道德经</div><div class="book-mini">毛泽东选集</div><div class="book-mini">专注工作</div></div>
+            <div id="s5-progress" class="progress-note"><strong>独立保存阅读进度</strong>切换书籍后，仍从上次停下的位置继续。</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene6" class="scene">
+        <div id="s6-glow" class="glow sage" data-layout-allow-overflow></div>
+        <div class="scene-content split">
+          <div class="s6-copy">
+            <div id="s6-kicker" class="eyebrow">需要沉浸时</div>
+            <h2 id="s6-title">展开完整阅读，不丢失上下文</h2>
+            <div id="s6-tags" class="feature-tags"><span class="feature-tag">章节目录</span><span class="feature-tag">前后片段</span><span class="feature-tag">收藏</span><span class="feature-tag">笔记</span></div>
+            <div id="s6-note" class="reader-note">微读与连续阅读，共用同一接续位置。</div>
+          </div>
+          <div id="s6-reader" class="frame s6-reader"><img src="assets/tanyue-reader-s6.png" alt="弹阅连续阅读界面" /></div>
+        </div>
+      </section>
+
+      <section id="scene7" class="scene">
+        <div id="s7-glow" class="glow" data-layout-allow-overflow></div>
+        <div class="scene-content">
+          <div class="s7-copy">
+            <div id="s7-kicker" class="eyebrow">导入自由 · 数据安心</div>
+            <h2 id="s7-title">复杂来源交给 Agent，内容与进度留在本机</h2>
+            <div id="s7-pipeline" class="pipeline">
+              <div class="pipeline-group"><div class="pipeline-node">TXT</div><div class="pipeline-node">Markdown</div><div class="pipeline-node">Agent JSON</div></div>
+              <div class="pipeline-arrow">→</div>
+              <div class="pipeline-node verify">100% 覆盖复核
+无漏段 · 无重复</div>
+              <div class="pipeline-arrow">→</div>
+              <div class="pipeline-node local">本地 SQLite
+书籍 · 进度 · 笔记</div>
+            </div>
+          </div>
+          <div id="s7-mosaic" class="s7-mosaic">
+            <div class="frame mosaic-main"><img src="assets/tanyue-main-s7.png" alt="弹阅主界面缩略图" /></div>
+            <div class="frame mosaic-popup"><img src="assets/tanyue-popup-s7.png" alt="弹阅阅读弹窗缩略图" /></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene8" class="scene">
+        <div id="s8-glow" class="glow" data-layout-allow-overflow></div>
+        <div class="scene-content closing">
+          <img id="s8-logo" class="closing-logo" src="assets/tanyue-icon.png" alt="弹阅图标" />
+          <div id="s8-kicker" class="eyebrow">弹阅 TANYUE</div>
+          <h2 id="s8-title">少而精地读，深而静地思。</h2>
+          <p id="s8-note" class="lead">让阅读自然发生在每一个小间隙。</p>
+          <div id="s8-mosaic" class="closing-mosaic">
+            <div class="frame closing-shot"><img src="assets/tanyue-popup-s8.png" alt="微读弹窗" /></div>
+            <div class="frame closing-shot"><img src="assets/tanyue-main-s8.png" alt="主界面" /></div>
+            <div class="frame closing-shot"><img src="assets/tanyue-reader-s8.png" alt="连续阅读" /></div>
+          </div>
+        </div>
+      </section>
+
+      <audio id="narration" class="clip" data-start="0.4" data-duration="36.72" data-track-index="10" data-volume="1" preload="auto" src="narration-master.mp3"></audio>
+
+      <div id="captions">
+        <div id="cg-0" class="caption-group">上班太忙，想读书</div><div id="cg-1" class="caption-group">却总抽不出整块时间</div>
+        <div id="cg-2" class="caption-group"><strong>弹阅</strong>，把书籍、文档和网页</div><div id="cg-3" class="caption-group">整理成 <strong>20～90 秒</strong>的完整片段</div>
+        <div id="cg-4" class="caption-group">在工作的间隙</div><div id="cg-5" class="caption-group">一张轻量阅读卡片安静出现</div><div id="cg-6" class="caption-group"><strong>不抢焦点</strong></div>
+        <div id="cg-7" class="caption-group">读完下一段、稍后提醒、今天暂停</div><div id="cg-8" class="caption-group">节奏始终由你决定</div>
+        <div id="cg-9" class="caption-group">每本书<strong>独立保存进度</strong></div><div id="cg-10" class="caption-group">切换后，也能从上次的位置准确接续</div>
+        <div id="cg-11" class="caption-group">需要沉浸时，展开连续阅读</div><div id="cg-12" class="caption-group">目录、收藏和笔记都在手边</div>
+        <div id="cg-13" class="caption-group">支持 <strong>TXT、Markdown 和 Agent</strong> 导入</div><div id="cg-14" class="caption-group">本地严格校验，内容覆盖 <strong>100%</strong></div><div id="cg-15" class="caption-group">数据默认保存在电脑里</div>
+        <div id="cg-16" class="caption-group">少而精地读，深而静地思</div><div id="cg-17" class="caption-group"><strong>弹阅</strong>，让阅读发生在每个小间隙</div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      var tl = gsap.timeline({ paused: true });
+      function transition(oldScene, newScene, at) {
+        tl.to(oldScene, { filter: "blur(12px)", scale: 1.025, opacity: 0, duration: 0.55, ease: "power2.inOut" }, at);
+        tl.fromTo(newScene, { filter: "blur(12px)", scale: 0.98, opacity: 0 }, { filter: "blur(0px)", scale: 1, opacity: 1, duration: 0.55, ease: "power2.inOut" }, at + 0.08);
+      }
+
+      tl.from("#s1-glow", { opacity: 0, scale: 0.84, duration: 1.1, ease: "sine.out" }, 0.1);
+      tl.from("#s1-kicker", { x: -46, opacity: 0, duration: 0.48, ease: "expo.out" }, 0.2);
+      tl.from("#s1-title", { y: 48, opacity: 0, duration: 0.72, ease: "power3.out" }, 0.35);
+      tl.from("#s1-note", { y: 26, opacity: 0, duration: 0.5, ease: "sine.out" }, 0.64);
+      tl.from(".s1-time", { y: 30, opacity: 0, scale: 0.96, duration: 0.42, stagger: 0.11, ease: "back.out(1.25)" }, 0.85);
+      tl.from("#s1-main", { x: 90, opacity: 0, rotation: 0, duration: 1.2, ease: "power1.out" }, 0.18);
+      tl.to("#s1-main", { y: -12, duration: 2.1, ease: "sine.inOut" }, 1.25);
+
+      transition("#scene1", "#scene2", 3.12);
+      tl.from("#s2-kicker", { x: -42, opacity: 0, duration: 0.38, ease: "expo.out" }, 3.38);
+      tl.from("#s2-title", { y: 50, opacity: 0, duration: 0.66, ease: "power3.out" }, 3.5);
+      tl.from("#s2-sources .source-chip", { x: -22, opacity: 0, duration: 0.35, stagger: 0.1, ease: "back.out(1.4)" }, 3.78);
+      tl.from("#s2-seconds", { scale: 0.92, opacity: 0, duration: 0.52, ease: "circ.out" }, 4.08);
+      tl.from("#s2-main", { x: 82, opacity: 0, scale: 0.94, duration: 0.88, ease: "power4.out" }, 3.46);
+      tl.from("#s2-glow", { opacity: 0, scale: 0.8, duration: 1.2, ease: "sine.out" }, 3.34);
+      tl.to("#s2-main", { y: -10, duration: 3.1, ease: "sine.inOut" }, 4.55);
+
+      transition("#scene2", "#scene3", 8.22);
+      tl.from("#s3-popup", { x: -86, opacity: 0, scale: 0.95, duration: 0.78, ease: "power4.out" }, 8.48);
+      tl.from("#s3-kicker", { y: -22, opacity: 0, duration: 0.36, ease: "back.out(1.2)" }, 8.52);
+      tl.from("#s3-title", { x: 55, opacity: 0, duration: 0.65, ease: "expo.out" }, 8.64);
+      tl.from("#s3-note", { y: 28, opacity: 0, duration: 0.5, ease: "sine.out" }, 8.96);
+      tl.from("#s3-badge", { scale: 0.9, opacity: 0, duration: 0.42, ease: "circ.out" }, 9.18);
+      tl.from("#s3-floating", { x: 35, y: 25, rotation: 8, opacity: 0, duration: 0.55, ease: "back.out(1.5)" }, 9.38);
+      tl.from("#s3-glow", { opacity: 0, scale: 0.82, duration: 1.1, ease: "power1.out" }, 8.44);
+      tl.to("#s3-floating", { y: -10, duration: 1.7, ease: "sine.inOut" }, 10.0);
+
+      transition("#scene3", "#scene4", 12.5);
+      tl.from("#s4-kicker", { x: -38, opacity: 0, duration: 0.36, ease: "expo.out" }, 12.76);
+      tl.from("#s4-title", { y: 48, opacity: 0, duration: 0.62, ease: "power3.out" }, 12.88);
+      tl.from("#s4-action1", { x: -42, opacity: 0, duration: 0.42, ease: "back.out(1.3)" }, 13.18);
+      tl.from("#s4-action2", { x: 32, opacity: 0, duration: 0.36, ease: "circ.out" }, 13.34);
+      tl.from("#s4-action3", { y: 26, opacity: 0, duration: 0.38, ease: "sine.out" }, 13.5);
+      tl.from("#s4-note", { opacity: 0, y: 20, duration: 0.46, ease: "power2.out" }, 13.78);
+      tl.from("#s4-popup", { x: 88, opacity: 0, scale: 0.95, duration: 0.82, ease: "power4.out" }, 12.82);
+      tl.from("#s4-glow", { opacity: 0, scale: 0.8, duration: 1.15, ease: "sine.out" }, 12.7);
+      tl.to("#s4-popup", { y: -9, duration: 2.5, ease: "sine.inOut" }, 14.1);
+
+      transition("#scene4", "#scene5", 16.7);
+      tl.from("#s5-main", { x: -78, opacity: 0, scale: 0.95, duration: 0.8, ease: "power4.out" }, 16.96);
+      tl.from("#s5-kicker", { y: -25, opacity: 0, duration: 0.34, ease: "back.out(1.2)" }, 17.02);
+      tl.from("#s5-title", { x: 48, opacity: 0, duration: 0.62, ease: "expo.out" }, 17.14);
+      tl.from("#s5-books .book-mini", { y: 56, opacity: 0, rotation: -4, duration: 0.48, stagger: 0.1, ease: "back.out(1.35)" }, 17.42);
+      tl.from("#s5-progress", { scale: 0.94, opacity: 0, duration: 0.44, ease: "circ.out" }, 17.88);
+      tl.from("#s5-glow", { opacity: 0, scale: 0.8, duration: 1.12, ease: "sine.out" }, 16.9);
+      tl.to("#s5-main", { y: -10, duration: 3.0, ease: "sine.inOut" }, 18.2);
+
+      transition("#scene5", "#scene6", 21.5);
+      tl.from("#s6-kicker", { x: -40, opacity: 0, duration: 0.36, ease: "expo.out" }, 21.76);
+      tl.from("#s6-title", { y: 48, opacity: 0, duration: 0.64, ease: "power3.out" }, 21.88);
+      tl.from("#s6-tags .feature-tag", { y: 24, opacity: 0, scale: 0.95, duration: 0.38, stagger: 0.08, ease: "back.out(1.25)" }, 22.18);
+      tl.from("#s6-note", { x: -24, opacity: 0, duration: 0.46, ease: "circ.out" }, 22.62);
+      tl.from("#s6-reader", { x: 88, opacity: 0, scale: 0.95, duration: 0.84, ease: "power4.out" }, 21.82);
+      tl.from("#s6-glow", { opacity: 0, scale: 0.82, duration: 1.16, ease: "sine.out" }, 21.7);
+      tl.to("#s6-reader", { y: -10, duration: 2.8, ease: "sine.inOut" }, 22.9);
+
+      transition("#scene6", "#scene7", 25.9);
+      tl.from("#s7-kicker", { y: -24, opacity: 0, duration: 0.36, ease: "back.out(1.2)" }, 26.16);
+      tl.from("#s7-title", { x: -56, opacity: 0, duration: 0.66, ease: "expo.out" }, 26.28);
+      tl.from("#s7-pipeline .pipeline-node", { y: 35, opacity: 0, scale: 0.95, duration: 0.44, stagger: 0.08, ease: "power3.out" }, 26.62);
+      tl.from("#s7-pipeline .pipeline-arrow", { scale: 0.4, opacity: 0, duration: 0.36, stagger: 0.18, ease: "back.out(1.55)" }, 26.98);
+      tl.from("#s7-mosaic", { x: 75, opacity: 0, scale: 0.94, duration: 0.86, ease: "power4.out" }, 26.38);
+      tl.from("#s7-glow", { opacity: 0, scale: 0.8, duration: 1.2, ease: "sine.out" }, 26.08);
+      tl.to("#s7-mosaic", { y: -10, duration: 4.0, ease: "sine.inOut" }, 27.4);
+
+      transition("#scene7", "#scene8", 32.1);
+      tl.from("#s8-glow", { opacity: 0, scale: 0.78, duration: 1.3, ease: "sine.out" }, 32.32);
+      tl.from("#s8-logo", { y: 36, opacity: 0, scale: 0.78, rotation: -6, duration: 0.62, ease: "back.out(1.4)" }, 32.42);
+      tl.from("#s8-kicker", { letterSpacing: ".28em", opacity: 0, duration: 0.52, ease: "power2.out" }, 32.68);
+      tl.from("#s8-title", { y: 46, opacity: 0, duration: 0.72, ease: "power3.out" }, 32.84);
+      tl.from("#s8-note", { y: 24, opacity: 0, duration: 0.5, ease: "sine.out" }, 33.16);
+      tl.from("#s8-mosaic .closing-shot", { y: 54, opacity: 0, scale: 0.92, duration: 0.5, stagger: 0.12, ease: "back.out(1.22)" }, 33.42);
+      tl.to("#s8-mosaic", { y: -8, duration: 2.6, ease: "sine.inOut" }, 34.25);
+
+      var captionGroups = [
+        { start: 0.48, end: 1.84 }, { start: 1.84, end: 3.36 }, { start: 3.68, end: 5.76 }, { start: 5.84, end: 8.72 },
+        { start: 8.8, end: 9.84 }, { start: 9.84, end: 11.92 }, { start: 12.08, end: 12.72 }, { start: 13.12, end: 15.52 },
+        { start: 15.52, end: 16.88 }, { start: 17.04, end: 18.88 }, { start: 18.96, end: 21.68 }, { start: 21.84, end: 23.92 },
+        { start: 24.0, end: 26.0 }, { start: 26.348, end: 28.908 }, { start: 28.988, end: 30.668 }, { start: 30.668, end: 32.428 },
+        { start: 32.508, end: 34.268 }, { start: 34.428, end: 37.068 }
+      ];
+      captionGroups.forEach(function (group, index) {
+        var selector = "#cg-" + index;
+        tl.set(selector, { visibility: "visible" }, group.start);
+        tl.fromTo(selector, { opacity: 0, y: 16, scale: 0.98 }, { opacity: 1, y: 0, scale: 1, duration: 0.16, ease: "power3.out", overwrite: "auto" }, group.start);
+        tl.to(selector, { opacity: 0, scale: 0.97, duration: 0.12, ease: "power2.in", overwrite: "auto" }, group.end - 0.12);
+        tl.set(selector, { opacity: 0, visibility: "hidden" }, group.end);
+      });
+      tl.to("#s8-logo, #s8-kicker, #s8-title, #s8-note, #s8-mosaic", { opacity: 0, y: -12, duration: 0.46, stagger: 0.03, ease: "power2.in" }, 37.62);
+
+      captionGroups.forEach(function (group, index) {
+        var element = document.getElementById("cg-" + index);
+        tl.seek(group.end + 0.01);
+        var computed = window.getComputedStyle(element);
+        if (computed.opacity !== "0" && computed.visibility !== "hidden") console.warn("[caption-lint] group " + index + " still visible");
+      });
+      tl.seek(0);
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
