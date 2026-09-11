@@ -1,5 +1,11 @@
 # 弹阅当前工程状态
 
+## 2026-09-11 Goal：公开宣传视频入口
+
+- 验收：最终 Ink Press MP4 托管至 GitHub Release，README 提供无需凭证的公开地址，校验远端文件与本地一致。
+- 范围：仅发布宣传成片、修改文档；不修改应用功能，不上传 API 密钥或登录令牌。
+- 已完成：成片上传 v0.2.7 Release，匿名 HTTP 200，远端 SHA-256 与本地一致；README 增加公开入口。`npm run verify` 67/67、类型检查、构建及产物检查通过。
+
 ## 2026-09-10 Goal：video-shotcraft Ink Press 宣传片（已完成）
 
 - 用户选择Ink Press模板模式，沿用60秒中文内容及曼波配音。已安装skill，独立制作工程位于 `output/marketing/shotcraft-2026-09-10`。

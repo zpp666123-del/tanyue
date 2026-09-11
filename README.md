@@ -14,6 +14,12 @@
 
 ![弹阅主界面](docs/screenshots-v0.2/tanyue-main.png)
 
+## 宣传视频
+
+[观看 / 下载 60 秒宣传片（1080p，曼波配音）](https://github.com/zpp666123-del/tanyue/releases/download/v0.2.7/tanyue-ink-press.mp4)
+
+视频已公开托管在 GitHub，无需登录或访问凭证。浏览器若直接下载 MP4，下载后用本地播放器打开即可。
+
 ## 下载
 
 前往 [GitHub Releases](https://github.com/zpp666123-del/tanyue/releases/latest) 下载：
